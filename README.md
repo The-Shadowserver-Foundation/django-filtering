@@ -9,6 +9,10 @@ The original usecase for this project required the following:
 - provides the ability to group filters by operator
 - serializes, validates, etc.
 
+## Development
+
+This project is very much a work-in-progress. All APIs are completely unstable.
+
 ## License
 
 GPL v3 (see `LICENSE` file)
