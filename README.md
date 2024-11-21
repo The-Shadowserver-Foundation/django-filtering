@@ -9,13 +9,27 @@ The original usecase for this project required the following:
 - provides the ability to group filters by operator
 - serializes, validates, etc.
 
+
 ## Development
 
 This project is very much a work-in-progress. All APIs are completely unstable.
 
+### Testing
+
+Note, I'm testing within a docker container, because I never run anything locally.
+For the moment the container is simply run with:
+
+    docker run --rm --name django-filtering --workdir /code -v $PWD:/code -d python:3.12 sleep infinity
+
+Then I execute commands on the shell within it:
+
+    docker exec -it django-filtering bash
+
+
 ## License
 
 GPL v3 (see `LICENSE` file)
+
 
 ## Copyright
 

@@ -31,3 +31,6 @@ Issues = "https://github.com/mmulich/django-filtering/issues"
 
 [tool.hatch.build.targets.wheel]
 only-packages = true
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
