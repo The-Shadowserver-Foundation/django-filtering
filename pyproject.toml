@@ -28,3 +28,6 @@ tests = ["pytest", "pytest-django"]
 [project.urls]
 Homepage = "https://github.com/mmulich/django-filtering"
 Issues = "https://github.com/mmulich/django-filtering/issues"
+
+[tool.hatch.build.targets.wheel]
+only-packages = true
