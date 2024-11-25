@@ -1,9 +1,9 @@
-from django_filtering.schema import FilterSchema
+from django_filtering.filters import FilterSet
 
 from . import models
 
 
-class ParticipantFilterSchema(FilterSchema):
+class ParticipantFilterSet(FilterSet):
     class Meta:
         model = models.Participant
         filters = '__all__'
