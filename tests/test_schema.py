@@ -1,13 +1,13 @@
 from django_filtering.schema import FilterSchema
 
+from tests.lab_app.models import Participant
+from tests.lab_app.filters import ParticipantFilterSchema
+
 
 class TestFilterSchema:
     def test_derive_all_fields_and_lookups(self):
         # Using the ParticipantFilterSchema with filters set to '__all__',
         # expect all fields and lookups to be valid for use.
-        from tests.lab_app.filters import ParticipantFilterSchema
-        from tests.lab_app.models import Participant
-
         schema = ParticipantFilterSchema()
         field_names = [f.name for f in Participant._meta.get_fields()]
         # Cursor check for all fields
@@ -23,8 +23,6 @@ class TestFilterSchema:
     def test_derive_scoped_fields_and_lookups(self):
         # Using the ParticipantScopedFilterSchema with filters set in the Meta class,
         # expect only those specified fields and lookups to be valid for use.
-        from tests.lab_app.models import Participant
-
         valid_filters = {
             "age": {"gte", "lte"},
             "sex": {"exact"},
