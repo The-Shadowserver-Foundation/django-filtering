@@ -23,7 +23,7 @@ classifiers = [
 dependencies = ["django>=4.2"]
 
 [project.optional-dependencies]
-tests = ["pytest", "pytest-django", "ipdb"]
+tests = ["pytest", "pytest-django", "ipdb", "model_bakery"]
 
 [project.urls]
 Homepage = "https://github.com/mmulich/django-filtering"

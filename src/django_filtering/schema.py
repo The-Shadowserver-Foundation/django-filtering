@@ -46,6 +46,16 @@ class BaseFilterSchema:
             query = Q.from_query_data(query)
         self.query = query
 
+    def get_queryset(self):
+        return self._meta.model.objects.all()
+
+    def filter_queryset(self, queryset=None):
+        if queryset is None:
+            queryset = self.get_queryset()
+        if self.query:
+            queryset = queryset.filter(self.query)
+        return queryset
+
 
 class FilterSchema(BaseFilterSchema, metaclass=FilterSchemaMetaclass):
     pass
