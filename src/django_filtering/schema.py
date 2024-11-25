@@ -4,6 +4,20 @@ from .filters import Q
 class FilterSchemaOptions:
     def __init__(self, options=None):
         self.model = getattr(options, "model", None)
+        self.filters = getattr(options, "filters", None)
+
+    def _match_all(self) -> bool:
+        return not self.filters or self.filters == '__all__'
+
+    def match_field(self, field_name: str) -> bool:
+        if self._match_all():
+            return True
+        return field_name in self.filters
+
+    def match_field_lookup(self, field_name: str, lookup_name: str) -> bool:
+        if self._match_all():
+            return True
+        return lookup_name in self.filters[field_name]
 
 
 class FilterSchemaMetaclass(type):
@@ -17,7 +31,8 @@ class FilterSchemaMetaclass(type):
 
         filters = {}
         for field in opts.model._meta.get_fields():
-            filters[field.name] = [l for l in field.get_lookups().keys()]
+            if opts.match_field(field.name):
+                filters[field.name] = {lookup_name for lookup_name in field.get_lookups().keys() if opts.match_field_lookup(field.name, lookup_name)}
 
         new_class.valid_filters = filters
 
