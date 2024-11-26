@@ -1,5 +1,5 @@
 import pytest
-from django_filtering.filters import FilterSet, Q
+from django_filtering.filters import FilterSet, InvalidFilterSet, InvalidQueryData, Q
 from model_bakery import baker
 from pytest_django import asserts
 
@@ -228,7 +228,7 @@ class TestFilterSet:
 @pytest.mark.django_db
 class TestFilterQuerySet:
     """
-    Test the FilterSet.filter_queryset method results in a filtered queryset.
+    Test the ``FilterSet.filter_queryset`` method results in a filtered queryset.
     """
 
     def make_participants(self):
@@ -265,3 +265,92 @@ class TestFilterQuerySet:
         qs = filterset.filter_queryset(Participant.objects.filter(name__icontains="d"))
         # Check queryset equality
         assert list(qs) == [self.participants[-1]]
+
+
+class TestFilterSetQueryData:
+    """
+    Test the ``FilterSet.validate`` method by checking the ``is_valid``, ``errors``, and ``query`` properties.
+    """
+
+    def test_valid(self):
+        """Test valid query data creates a valid query object."""
+        data = (
+            "and",
+            (
+                (
+                    "name",
+                    {"lookup": "icontains", "value": "har"},
+                ),
+            ),
+        )
+        filterset = ParticipantFilterSet(data)
+        # Target
+        assert filterset.is_valid, filterset.errors
+        expected = Q(("name__icontains", "har"), _connector=Q.AND)
+        assert filterset.query == expected
+
+    def test_invalid_toplevel_operator(self):
+        data = (
+            "meh",
+            (
+                (
+                    "name",
+                    {"lookup": "icontains", "value": "har"},
+                ),
+            ),
+        )
+        filterset = ParticipantFilterSet(data)
+        assert not filterset.is_valid, "should NOT be a valid top-level operator"
+        assert filterset.errors == {'top_level_operator': [f"invalid operator '{data[0]}' used"]}
+
+    def test_invalid_filter_field(self):
+        data = (
+            "and",
+            (
+                (
+                    "title",
+                    {"lookup": "icontains", "value": "miss"},
+                ),
+            ),
+        )
+        filterset = ParticipantFilterSet(data)
+        assert not filterset.is_valid, "should be invalid due to invalid filter name"
+        assert filterset.errors == {"title": ["invalid filter"]}
+
+    def test_invalid_filter_field_lookup(self):
+        data = (
+            "and",
+            (
+                (
+                    "name",
+                    {"lookup": "irandom", "value": "10"},
+                ),
+            ),
+        )
+        filterset = ParticipantFilterSet(data)
+        assert not filterset.is_valid, "should be invalid due to invalid filter name"
+        assert filterset.errors == {"name": ["invalid filter lookup"]}
+
+    def test_invalid_format(self):
+        """Check the ``Filterset.filter_queryset`` raises exception when invalid."""
+        data = {"and": ["or", ["other", "thing"]]}
+        filterset = ParticipantFilterSet(data)
+
+        with pytest.raises(InvalidQueryData):
+            filterset.is_valid
+
+    def test_filter_queryset_raises_invalid_exception(self):
+        """Check the ``Filterset.filter_queryset`` raises exception when invalid."""
+        data = (
+            "meh",  # invalid
+            (
+                (
+                    "name",
+                    {"lookup": "icontains", "value": "har"},
+                ),
+            ),
+        )
+        filterset = ParticipantFilterSet(data)
+
+        with pytest.raises(InvalidFilterSet):
+            filterset.filter_queryset()

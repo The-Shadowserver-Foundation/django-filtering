@@ -1,4 +1,4 @@
-from django.db.models import Q as BaseQ
+from django.db.models import Q as BaseQ, QuerySet
 
 
 DEFAULT_LOOKUP = "iexact"
@@ -114,22 +114,84 @@ class FilterSetMetaclass(type):
         return new_class
 
 
+class InvalidQueryData(Exception):
+    pass
+
+
+class InvalidFilterSet(Exception):
+    pass
+
+
 class BaseFilterSet:
 
-    def __init__(self, query=None):
-        if query and not isinstance(query, Q):
-            query = Q.from_query_data(query)
-        self.query = query
+    def __init__(self, query_data=None):
+        self.query_data = query_data
+        # Initialize the rendered query state
+        # This represents the data as native Q objects
+        self._query = None
+        # Initialize the errors state, to be called by is_valid()
+        self._errors = None
 
     def get_queryset(self):
         return self._meta.model.objects.all()
 
-    def filter_queryset(self, queryset=None):
+    def filter_queryset(self, queryset=None) -> QuerySet:
+        if not self.is_valid:
+            raise InvalidFilterSet(
+                "The query is invalid! "
+                "Hint, check `is_valid` before running `filter_queryset`."
+            )
         if queryset is None:
             queryset = self.get_queryset()
         if self.query:
             queryset = queryset.filter(self.query)
         return queryset
+
+    @property
+    def is_valid(self) -> bool:
+        """Property used to check trigger and check validation."""
+        if self._errors is None:
+            self.validate()
+        return not self._errors
+
+    @property
+    def errors(self):
+        """A list of validation errors. This value is populated when there are validation errors."""
+        return self._errors
+
+    @property
+    def query(self) -> Q:
+        """Q object derived from query data. Only available after validation."""
+        return self._query
+
+    def validate(self) -> None:
+        """Check the given query data contains valid fields and lookups."""
+        # FIXME I'd like the validate the contents on both the frontend and backend
+        #       using json-schema. A solution is somewhat working, but needs further
+        #       testing in order to make it a viable solution.
+        # For the time being validate based on field and lookup name.
+        # Note this solution is not meant to handle operators at depth.
+        # It assumes a single top-level operator (i.e. AND or OR) with
+        # an array of filter criteria.
+        self._errors = {}
+        if self.query_data and not isinstance(self.query_data, Q):
+            try:
+                operator = self.query_data[0]
+            except (IndexError, KeyError, TypeError):
+                raise InvalidQueryData("invalid format")
+            if operator.lower() not in ('and', 'or',):
+                self._errors['top_level_operator'] = [f"invalid operator '{operator.lower()}' used"]
+            for filter_name, details in self.query_data[1]:
+                if filter_name not in self.valid_filters:
+                    self._errors.setdefault(filter_name, [])
+                    self._errors[filter_name].append('invalid filter')
+                    continue
+                elif details['lookup'] not in self.valid_filters[filter_name]:
+                    self._errors.setdefault(filter_name, [])
+                    self._errors[filter_name].append('invalid filter lookup')
+            if not self._errors:
+                # Translate to Q objects
+                self._query = Q.from_query_data(self.query_data)
 
 
 class FilterSet(BaseFilterSet, metaclass=FilterSetMetaclass):
