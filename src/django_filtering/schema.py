@@ -1,5 +1,48 @@
 import json
 
+class JSONEncoder(json.JSONEncoder):
+    """
+    Overridden to provide encoding for the ``set`` type.
+    """
+
+    def default(self, o):
+        if isinstance(o, set):
+            return list(o)
+        return super().default(o)
+
+
+class FilteringOptionsSchema:
+    def __init__(self, filterset):
+        self.filterset = filterset
+
+    def _get_field(self, field_name):
+        return self.filterset._meta.model._meta.get_field(field_name)
+
+    @property
+    def schema(self):
+        operators = {
+            "and": {"type": "operator", "label": "All of..."},
+            "or": {"type": "operator", "label": "Any of..."},
+            "not": {"type": "operator", "label": "None of..."},
+        }
+        filters = {}
+        for filter_name, lookups in self.filterset.valid_filters.items():
+            field = self._get_field(filter_name)
+            info = {
+                "type": "field",
+                "field_type": "string",
+                "lookups": lookups,
+                "label": field.verbose_name.title(),
+            }
+            if field.help_text:
+                info['description'] = field.help_text
+            # TODO nargs
+            filters[filter_name] = info
+        return {'operators': operators, 'filters': filters}
+
+    def __str__(self):
+            return json.dumps(self.schema, cls=JSONEncoder)
+
 
 BASE_DEFINITIONS = {
     "and-or-op": {
@@ -32,17 +75,6 @@ BASE_DEFINITIONS = {
         ],
     },
 }
-
-
-class JSONEncoder(json.JSONEncoder):
-    """
-    Overridden to provide encoding for the ``set`` type.
-    """
-
-    def default(self, o):
-        if isinstance(o, set):
-            return list(o)
-        return super().default(o)
 
 
 class JSONSchema:

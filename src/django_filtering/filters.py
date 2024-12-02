@@ -1,6 +1,6 @@
 from django.db.models import Q as BaseQ, QuerySet
 
-from .schema import JSONSchema
+from .schema import JSONSchema, FilteringOptionsSchema
 
 
 DEFAULT_LOOKUP = "iexact"
@@ -136,6 +136,9 @@ class BaseFilterSet:
         # Create the json-schema for validation
         # Note, this is a public variable because it can be made public for frontend validation.
         self.json_schema = JSONSchema(self)
+        # Create the filtering options schema
+        # to provide the frontend with the available filtering options.
+        self.filtering_options_schema = FilteringOptionsSchema(self)
 
     def get_queryset(self):
         return self._meta.model.objects.all()
