@@ -1,5 +1,7 @@
 from django.db.models import Q as BaseQ, QuerySet
 
+from .schema import JSONSchema
+
 
 DEFAULT_LOOKUP = "iexact"
 
@@ -131,6 +133,9 @@ class BaseFilterSet:
         self._query = None
         # Initialize the errors state, to be called by is_valid()
         self._errors = None
+        # Create the json-schema for validation
+        # Note, this is a public variable because it can be made public for frontend validation.
+        self.json_schema = JSONSchema(self)
 
     def get_queryset(self):
         return self._meta.model.objects.all()

@@ -20,7 +20,7 @@ classifiers = [
   "Framework :: Django :: 4",
   "Framework :: Django :: 5",
 ]
-dependencies = ["django>=4.2"]
+dependencies = ["django>=4.2", "jsonschema"]
 
 [project.optional-dependencies]
 tests = ["pytest", "pytest-django", "ipdb", "model_bakery"]
