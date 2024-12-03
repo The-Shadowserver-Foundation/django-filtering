@@ -1,4 +1,7 @@
+import jsonschema
+from django.conf import settings
 from django.db.models import Q as BaseQ, QuerySet
+from referencing import Registry
 
 from .schema import JSONSchema, FilteringOptionsSchema
 
@@ -175,34 +178,45 @@ class BaseFilterSet:
         """Q object derived from query data. Only available after validation."""
         return self._query
 
-    def validate(self) -> None:
-        """Check the given query data contains valid fields and lookups."""
-        # FIXME I'd like the validate the contents on both the frontend and backend
-        #       using json-schema. A solution is somewhat working, but needs further
-        #       testing in order to make it a viable solution.
-        # For the time being validate based on field and lookup name.
-        # Note this solution is not meant to handle operators at depth.
-        # It assumes a single top-level operator (i.e. AND or OR) with
-        # an array of filter criteria.
-        self._errors = {}
-        if self.query_data and not isinstance(self.query_data, Q):
+    def _make_json_schema_validator(self, schema):
+        cls = jsonschema.validators.validator_for(schema)
+        cls.check_schema(schema)  # XXX
+        if settings.DEBUG:
             try:
-                operator = self.query_data[0]
-            except (IndexError, KeyError, TypeError):
-                raise InvalidQueryData("invalid format")
-            if operator.lower() not in ('and', 'or',):
-                self._errors['top_level_operator'] = [f"invalid operator '{operator.lower()}' used"]
-            for filter_name, details in self.query_data[1]:
-                if filter_name not in self.valid_filters:
-                    self._errors.setdefault(filter_name, [])
-                    self._errors[filter_name].append('invalid filter')
-                    continue
-                elif details['lookup'] not in self.valid_filters[filter_name]:
-                    self._errors.setdefault(filter_name, [])
-                    self._errors[filter_name].append('invalid filter lookup')
-            if not self._errors:
-                # Translate to Q objects
-                self._query = Q.from_query_data(self.query_data)
+                cls.check_schema(schema)
+            except jsonschema.SchemaError:
+                raise RuntimeError("The generated schema is invalid. This is a bug.")
+
+        return cls(schema)
+
+    def validate(self) -> None:
+        """
+        Check the given query data contains valid syntax, fields and lookups.
+
+        Errors will be available in the ``errors`` property.
+        If the property is empty, there were no errors.
+
+        Use the ``is_valid`` property to call this method.
+        """
+        self._errors = []
+
+        # Bail out when the query_data is empty or undefined
+        if not self.query_data:
+            return
+
+        # Validates both the schema and the data
+        validator = self._make_json_schema_validator(self.json_schema.schema)
+        for err in validator.iter_errors(self.query_data):
+            # TODO We can provide better detail than simply echoing
+            #      the exception details. See jsonschema.exceptions.best_match.
+            self._errors.append({
+                'json_path': err.json_path,
+                'message': err.message,
+            })
+
+        # Translate to Q objects
+        if not self._errors:
+            self._query = Q.from_query_data(self.query_data)
 
 
 class FilterSet(BaseFilterSet, metaclass=FilterSetMetaclass):

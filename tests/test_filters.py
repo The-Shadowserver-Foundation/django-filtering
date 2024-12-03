@@ -274,15 +274,15 @@ class TestFilterSetQueryData:
 
     def test_valid(self):
         """Test valid query data creates a valid query object."""
-        data = (
+        data = [
             "and",
-            (
-                (
+            [
+                [
                     "name",
                     {"lookup": "icontains", "value": "har"},
-                ),
-            ),
-        )
+                ],
+            ],
+        ]
         filterset = ParticipantFilterSet(data)
         # Target
         assert filterset.is_valid, filterset.errors
@@ -290,66 +290,90 @@ class TestFilterSetQueryData:
         assert filterset.query == expected
 
     def test_invalid_toplevel_operator(self):
-        data = (
+        data = [
             "meh",
-            (
-                (
+            [
+                [
                     "name",
                     {"lookup": "icontains", "value": "har"},
-                ),
-            ),
-        )
+                ],
+            ],
+        ]
         filterset = ParticipantFilterSet(data)
         assert not filterset.is_valid, "should NOT be a valid top-level operator"
-        assert filterset.errors == {'top_level_operator': [f"invalid operator '{data[0]}' used"]}
+        expected_errors = [
+            {'json_path': '$[0]', 'message': "'meh' is not one of ['and', 'or']"},
+        ]
+        assert filterset.errors == expected_errors
 
     def test_invalid_filter_field(self):
-        data = (
+        data = [
             "and",
-            (
-                (
+            [
+                [
                     "title",
                     {"lookup": "icontains", "value": "miss"},
-                ),
-            ),
-        )
+                ],
+            ],
+        ]
         filterset = ParticipantFilterSet(data)
         assert not filterset.is_valid, "should be invalid due to invalid filter name"
-        assert filterset.errors == {"title": ["invalid filter"]}
+        expected_errors = [
+            {
+                'json_path': '$[1][0]',
+                'message': "['title', {'lookup': 'icontains', 'value': 'miss'}] is not valid under any of the given schemas"
+            },
+        ]
+        assert filterset.errors == expected_errors
 
     def test_invalid_filter_field_lookup(self):
-        data = (
+        data = [
             "and",
-            (
-                (
+            [
+                [
                     "name",
                     {"lookup": "irandom", "value": "10"},
-                ),
-            ),
-        )
+                ],
+            ],
+        ]
         filterset = ParticipantFilterSet(data)
         assert not filterset.is_valid, "should be invalid due to invalid filter name"
-        assert filterset.errors == {"name": ["invalid filter lookup"]}
+        expected_errors = [
+            {
+                'json_path': '$[1][0]',
+                'message': "['name', {'lookup': 'irandom', 'value': '10'}] is not valid under any of the given schemas"
+            },
+        ]
+        assert filterset.errors == expected_errors
 
     def test_invalid_format(self):
         """Check the ``Filterset.filter_queryset`` raises exception when invalid."""
         data = {"and": ["or", ["other", "thing"]]}
         filterset = ParticipantFilterSet(data)
 
-        with pytest.raises(InvalidQueryData):
-            filterset.is_valid
+        assert not filterset.is_valid
+        expected_errors = [
+            {
+                'json_path': '$',
+                'message': "{'and': ['or', ['other', 'thing']]} is not of type 'array'",
+            },
+        ]
+        assert filterset.errors == expected_errors
 
     def test_filter_queryset_raises_invalid_exception(self):
-        """Check the ``Filterset.filter_queryset`` raises exception when invalid."""
-        data = (
+        """
+        Check the ``Filterset.filter_queryset`` raises exception when invalid.
+        The ``FilterSet.is_valid`` property must be checked prior to filtering.
+        """
+        data = [
             "meh",  # invalid
-            (
-                (
+            [
+                [
                     "name",
                     {"lookup": "icontains", "value": "har"},
-                ),
-            ),
-        )
+                ],
+            ],
+        ]
         filterset = ParticipantFilterSet(data)
 
         with pytest.raises(InvalidFilterSet):
