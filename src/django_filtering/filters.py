@@ -109,7 +109,10 @@ class FilterSetMetaclass(type):
         filters = {}
         for field in opts.model._meta.get_fields():
             if opts.match_field(field.name):
-                filters[field.name] = {lookup_name for lookup_name in field.get_lookups().keys() if opts.match_field_lookup(field.name, lookup_name)}
+                lookups = {lookup_name for lookup_name in field.get_lookups().keys() if opts.match_field_lookup(field.name, lookup_name)}
+                # Coerce to list for JSON encoding and sort for idempotence
+                lookups = sorted(list(lookups))
+                filters[field.name] = lookups
 
         new_class.valid_filters = filters
 

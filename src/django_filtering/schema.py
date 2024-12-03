@@ -1,15 +1,5 @@
 import json
 
-class JSONEncoder(json.JSONEncoder):
-    """
-    Overridden to provide encoding for the ``set`` type.
-    """
-
-    def default(self, o):
-        if isinstance(o, set):
-            return list(o)
-        return super().default(o)
-
 
 class FilteringOptionsSchema:
     def __init__(self, filterset):
@@ -41,7 +31,7 @@ class FilteringOptionsSchema:
         return {'operators': operators, 'filters': filters}
 
     def __str__(self):
-            return json.dumps(self.schema, cls=JSONEncoder)
+            return json.dumps(self.schema)
 
 
 BASE_DEFINITIONS = {
@@ -115,4 +105,4 @@ class JSONSchema:
         return schema
 
     def __str__(self):
-        return json.dumps(self.schema, cls=JSONEncoder)
+        return json.dumps(self.schema)

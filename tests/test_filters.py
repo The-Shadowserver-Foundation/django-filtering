@@ -201,7 +201,7 @@ class TestFilterSet:
 
         # Check for all fields and all lookups
         expected_filters = {
-            field.name: {lookup_name for lookup_name in field.get_lookups().keys()}
+            field.name: sorted(list(field.get_lookups().keys()))
             for field in Participant._meta.get_fields()
         }
         assert schema.valid_filters == expected_filters
@@ -212,8 +212,8 @@ class TestFilterSet:
         expect only those specified fields and lookups to be valid for use.
         """
         valid_filters = {
-            "age": {"gte", "lte"},
-            "sex": {"exact"},
+            "age": ["gte", "lte"],
+            "sex": ["exact"],
         }
 
         class ScopedFilterSet(FilterSet):

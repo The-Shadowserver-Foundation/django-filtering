@@ -3,7 +3,7 @@ import json
 from jsonschema.protocols import Validator
 
 from django_filtering.filters import FilterSet
-from django_filtering.schema import FilteringOptionsSchema, JSONEncoder, JSONSchema
+from django_filtering.schema import FilteringOptionsSchema, JSONSchema
 
 from tests.lab_app.models import Participant
 from tests.lab_app.filters import ParticipantFilterSet
@@ -16,8 +16,8 @@ class TestJsonSchema:
         expect only those specified fields and lookups to be valid for use.
         """
         valid_filters = {
-            "age": {"gte", "lte"},
-            "sex": {"exact"},
+            "age": ["gte", "lte"],
+            "sex": ["exact"],
         }
 
         class ScopedFilterSet(FilterSet):
@@ -49,7 +49,7 @@ class TestJsonSchema:
                 {
                     'type': 'object',
                     'properties': {
-                        'lookup': {'enum': {'gte', 'lte'}},
+                        'lookup': {'enum': valid_filters['age']},
                         'value': {'type': 'string'}
                     }
                 }
@@ -63,7 +63,7 @@ class TestJsonSchema:
                 {
                     'type': 'object',
                     'properties': {
-                        'lookup': {'enum': {'exact'}},
+                        'lookup': {'enum': valid_filters['sex']},
                         'value': {'type': 'string'}
                     }
                 }
@@ -75,15 +75,15 @@ class TestJsonSchema:
         filterset = ParticipantFilterSet()
         json_schema = JSONSchema(filterset)
 
-        assert json.dumps(json_schema.schema, cls=JSONEncoder) == str(json_schema)
+        assert json.dumps(json_schema.schema) == str(json_schema)
         assert json.loads(str(json_schema))
 
 
 class TestFilteringOptionsSchema:
     def test_generation_of_schema(self):
         valid_filters = {
-            "age": {"gte", "lte"},
-            "sex": {"exact"},
+            "age": ["gte", "lte"],
+            "sex": ["exact"],
         }
 
         class ScopedFilterSet(FilterSet):
@@ -102,14 +102,14 @@ class TestFilteringOptionsSchema:
         assert sorted(schema.schema['filters'].keys()) == sorted(valid_filters.keys())
 
         # Check for filters
-        expected = {'type': 'field', 'field_type': 'string', 'lookups': {'lte', 'gte'}, 'label': 'Age'}
+        expected = {'type': 'field', 'field_type': 'string', 'lookups': valid_filters['age'], 'label': 'Age'}
         assert schema.schema['filters']['age'] == expected
-        expected = {'type': 'field', 'field_type': 'string', 'lookups': {'exact'}, 'label': 'Sex'}
+        expected = {'type': 'field', 'field_type': 'string', 'lookups': valid_filters['sex'], 'label': 'Sex'}
         assert schema.schema['filters']['sex'] == expected
 
     def test_to_json(self):
         filterset = ParticipantFilterSet()
         schema = FilteringOptionsSchema(filterset)
 
-        assert json.dumps(schema.schema, cls=JSONEncoder) == str(schema)
+        assert json.dumps(schema.schema) == str(schema)
         assert json.loads(str(schema))
