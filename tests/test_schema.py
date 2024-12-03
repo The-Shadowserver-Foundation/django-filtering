@@ -38,8 +38,8 @@ class TestJsonSchema:
         assert sorted(schema['$defs'].keys()) == sorted(expected_defs)
 
         # Verify filters defined in the `#/$defs/filters` container
-        expected = [f"#/$defs/{n}-filter" for n in valid_filters]
-        assert sorted(schema['$defs']['filters']['anyOf']) == sorted(expected)
+        expected = [{'$ref': f"#/$defs/{n}-filter"} for n in valid_filters]
+        assert schema['$defs']['filters']['anyOf'] == expected
 
         # Look for the particular filters
         expected_age_filter = {

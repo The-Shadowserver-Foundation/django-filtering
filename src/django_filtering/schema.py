@@ -94,9 +94,9 @@ class JSONSchema:
                     },
                 ],
             }
-        definitions['filters'] = {"anyOf": [f"#/$defs/{n}" for n in fields]}
+        definitions['filters'] = {'anyOf': [{'$ref': f"#/$defs/{n}"} for n in fields]}
         schema = {
-            "$id": "https://example.com/exp.json",  # TODO Provide serving url
+            "$id": f"https://example.com/{model_name}.json",  # TODO Provide serving url
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "title": f"{model_name} Schema",
             "$ref": "#/$defs/and-or-op",
