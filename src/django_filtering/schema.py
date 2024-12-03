@@ -109,12 +109,7 @@ class JSONSchema:
             "$id": "https://example.com/exp.json",  # TODO Provide serving url
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             "title": f"{model_name} Schema",
-            "type": "object",
-            "properties": {
-              "query": {
-                "$ref": "#/$defs/and-or-op"
-              }
-            },
+            "$ref": "#/$defs/and-or-op",
             "$defs": definitions,
         }
         return schema
