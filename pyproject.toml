@@ -34,4 +34,4 @@ only-packages = true
 
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
-addopts = "-v --pdbcls=IPython.terminal.debugger:TerminalPdb"
+addopts = "-vv --pdbcls=IPython.terminal.debugger:TerminalPdb"
