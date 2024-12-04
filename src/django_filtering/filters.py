@@ -221,3 +221,25 @@ class BaseFilterSet:
 
 class FilterSet(BaseFilterSet, metaclass=FilterSetMetaclass):
     pass
+
+
+def filterset_factory(model, base_cls=FilterSet, filters='__all__'):
+    """
+    Factory for creating a FilterSet from a model
+    """
+    # Build up a list of attributes that the Meta object will have.
+    attrs = {"model": model, "filters": filters}
+
+    # If parent class already has an inner Meta, the Meta we're
+    # creating needs to inherit from the parent's inner meta.
+    bases = (base_cls.Meta,) if hasattr(base_cls, "Meta") else ()
+    Meta = type("Meta", bases, attrs)
+
+    # Give this new class a reasonable name.
+    class_name = model.__name__ + "FilterSet"
+
+    # Class attributes for the new class.
+    class_attrs = {"Meta": Meta}
+
+    # Instantiate type() in order to use the same metaclass as the base.
+    return type(base_cls)(class_name, (base_cls,), class_attrs)
