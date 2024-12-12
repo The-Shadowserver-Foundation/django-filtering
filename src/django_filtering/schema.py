@@ -18,6 +18,10 @@ class FilteringOptionsSchema:
         filters = {}
         for filter_name, lookups in self.filterset.valid_filters.items():
             field = self._get_field(filter_name)
+            if field.is_relation:
+                # FIXME Ideally we aren't dropping relational fields,
+                #       but these are a feature not entirely needed at this time.
+                continue
             info = {
                 "type": "field",
                 "field_type": "string",
