@@ -97,7 +97,16 @@ class TestFilteringOptionsSchema:
                 "gte": {"type": "input", "label": "greater than or equal to"},
                 "lte": {"type": "input", "label": "less than or equal to"},
             },
-            "sex": {"exact": {"type": "input", "label": "equals"}},
+            "sex": {"exact": {
+                "type": "choice",
+                "label": "matches",
+                "choices": [
+                    ('u', 'Unknown',),
+                    ('m', 'Male',),
+                    ('f', 'Female',),
+                    ('i', 'Intersex',),
+                ],
+            }},
         }
 
         class ScopedFilterSet(filters.FilterSet):
@@ -108,7 +117,7 @@ class TestFilteringOptionsSchema:
                 label="Age",
             )
             sex = filters.Filter(
-                filters.InputLookup('exact', label='equals'),
+                filters.ChoiceLookup('exact', label='matches'),
                 default_lookup='exact',
                 label="Sex",
             )

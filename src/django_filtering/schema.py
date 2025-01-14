@@ -22,15 +22,7 @@ class FilteringOptionsSchema:
                 # FIXME Ideally we aren't dropping relational fields,
                 #       but these are a feature not entirely needed at this time.
                 continue
-            info = {
-                "default_lookup": filter.default_lookup,
-                "lookups": {lu.name: {"type": "input", "label": lu.label} for lu in filter.lookups},
-                "label": filter.label if filter.label else field.verbose_name.title(),
-            }
-            if field.help_text:
-                info['description'] = field.help_text
-            # TODO nargs
-            filters[filter.name] = info
+            filters[filter.name] = filter.get_options_schema_info(field)
         return {'operators': operators, 'filters': filters}
 
     def __str__(self):

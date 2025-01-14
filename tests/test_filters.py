@@ -83,7 +83,7 @@ class TestFilterSetCreation:
                 label="Age",
             )
             sex = filters.Filter(
-                filters.InputLookup('exact', label='equals'),
+                filters.ChoiceLookup('exact', label='equals'),
                 default_lookup='exact',
                 label="Sex",
             )
