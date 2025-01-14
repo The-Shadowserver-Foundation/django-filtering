@@ -2,7 +2,7 @@ import json
 
 from jsonschema.protocols import Validator
 
-from django_filtering.filters import FilterSet
+from django_filtering import filters
 from django_filtering.schema import FilteringOptionsSchema, JSONSchema
 
 from tests.lab_app.models import Participant
@@ -17,13 +17,24 @@ class TestJsonSchema:
         """
         valid_filters = {
             "age": ["gte", "lte"],
-            "sex": ["exact"],
+            "sex": ["icontains"],
         }
 
-        class ScopedFilterSet(FilterSet):
+        class ScopedFilterSet(filters.FilterSet):
+            age = filters.Filter(
+                filters.InputLookup('gte', label="greater than or equal to"),
+                filters.InputLookup('lte', label="less than or equal to"),
+                default_lookup="gte",
+                label="Age",
+            )
+            sex = filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                default_lookup='icontains',
+                label="Sex",
+            )
+
             class Meta:
                 model = Participant
-                filters = valid_filters
 
         filterset = ScopedFilterSet()
         json_schema = JSONSchema(filterset)
@@ -82,14 +93,28 @@ class TestJsonSchema:
 class TestFilteringOptionsSchema:
     def test_generation_of_schema(self):
         valid_filters = {
-            "age": ["gte", "lte"],
-            "sex": ["exact"],
+            "age": {
+                "gte": {"type": "input", "label": "greater than or equal to"},
+                "lte": {"type": "input", "label": "less than or equal to"},
+            },
+            "sex": {"exact": {"type": "input", "label": "equals"}},
         }
 
-        class ScopedFilterSet(FilterSet):
+        class ScopedFilterSet(filters.FilterSet):
+            age = filters.Filter(
+                filters.InputLookup('gte', label="greater than or equal to"),
+                filters.InputLookup('lte', label="less than or equal to"),
+                default_lookup="gte",
+                label="Age",
+            )
+            sex = filters.Filter(
+                filters.InputLookup('exact', label='equals'),
+                default_lookup='exact',
+                label="Sex",
+            )
+
             class Meta:
                 model = Participant
-                filters = valid_filters
 
         filterset = ScopedFilterSet()
         schema = FilteringOptionsSchema(filterset)
@@ -102,9 +127,9 @@ class TestFilteringOptionsSchema:
         assert sorted(schema.schema['filters'].keys()) == sorted(valid_filters.keys())
 
         # Check for filters
-        expected = {'type': 'field', 'field_type': 'string', 'lookups': valid_filters['age'], 'label': 'Age'}
+        expected = {'default_lookup': list(valid_filters['age'].keys())[0], 'lookups': valid_filters['age'], 'label': 'Age'}
         assert schema.schema['filters']['age'] == expected
-        expected = {'type': 'field', 'field_type': 'string', 'lookups': valid_filters['sex'], 'label': 'Sex'}
+        expected = {'default_lookup': list(valid_filters['sex'].keys())[0], 'lookups': valid_filters['sex'], 'label': 'Sex'}
         assert schema.schema['filters']['sex'] == expected
 
     def test_to_json(self):

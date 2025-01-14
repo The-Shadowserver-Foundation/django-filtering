@@ -3,34 +3,46 @@ import pytest
 from model_bakery import baker
 from pytest_django import asserts
 
-from django_filtering.filters import FilterSet, InvalidFilterSet, InvalidQueryData
+from django_filtering import filters
 from django_filtering.query import Q
 
 from tests.lab_app.models import Participant
 from tests.lab_app.filters import ParticipantFilterSet
 
 
-class TestFilterSet:
+class TestFilterSetCreation:
+    """
+    Testing the FilterSet meta class creation.
+    """
+
+    @pytest.mark.skip(reason="The `__all__` feature has been disabled")
     def test_derive_all_fields_and_lookups(self):
         """
         Using the ParticipantFilterSet with filters set to '__all__',
         expect all fields and lookups to be valid for use.
         """
-        schema = ParticipantFilterSet()
+
+        class ScopedFilterSet(filters.FilterSet):
+            class Meta:
+                model = Participant
+                filters = '__all__'
+
+        filterset = ScopedFilterSet()
         field_names = [f.name for f in Participant._meta.get_fields()]
         # Cursor check for all fields
-        assert list(schema.valid_filters.keys()) == field_names
+        assert list(filterset.valid_filters.keys()) == field_names
 
         # Check for all fields and all lookups
         expected_filters = {
             field.name: sorted(list(field.get_lookups().keys()))
             for field in Participant._meta.get_fields()
         }
-        assert schema.valid_filters == expected_filters
+        assert filterset.valid_filters == expected_filters
 
+    @pytest.mark.skip(reason="Meta option for defining filters disabled")
     def test_derive_scoped_fields_and_lookups(self):
         """
-        Using the ParticipantScopedFilterSet with filters set in the Meta class,
+        Using a scoped filterset with filters set in the Meta class,
         expect only those specified fields and lookups to be valid for use.
         """
         valid_filters = {
@@ -38,7 +50,7 @@ class TestFilterSet:
             "sex": ["exact"],
         }
 
-        class ScopedFilterSet(FilterSet):
+        class ScopedFilterSet(filters.FilterSet):
             class Meta:
                 model = Participant
                 filters = valid_filters
@@ -46,6 +58,42 @@ class TestFilterSet:
         schema = ScopedFilterSet()
         # Check for valid fields and lookups
         assert schema.valid_filters == valid_filters
+
+    def test_explicit_filter_definitions(self):
+        """
+        Using a filterset with explicitly defined filters,
+        expect only those defined filters and lookups to be valid for use.
+        """
+        valid_filters = {
+            "name": ["icontains"],
+            "age": ["gte", "lte"],
+            "sex": ["exact"],
+        }
+
+        class TestFilterSet(filters.FilterSet):
+            name = filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                default_lookup="icontains",
+                label="Name",
+            )
+            age = filters.Filter(
+                filters.InputLookup('gte', label="greater than or equal to"),
+                filters.InputLookup('lte', label="less than or equal to"),
+                default_lookup="gte",
+                label="Age",
+            )
+            sex = filters.Filter(
+                filters.InputLookup('exact', label='equals'),
+                default_lookup='exact',
+                label="Sex",
+            )
+
+            class Meta:
+                model = Participant
+
+        filterset = TestFilterSet()
+        assert {f.name: [l.name for l in f.lookups] for f in  filterset.filters} == valid_filters
+
 
 @pytest.mark.django_db
 class TestFilterQuerySet:
@@ -198,5 +246,5 @@ class TestFilterSetQueryData:
         ]
         filterset = ParticipantFilterSet(data)
 
-        with pytest.raises(InvalidFilterSet):
+        with pytest.raises(filters.InvalidFilterSet):
             filterset.filter_queryset()

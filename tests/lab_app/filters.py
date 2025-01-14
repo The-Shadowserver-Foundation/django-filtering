@@ -1,9 +1,10 @@
-from django_filtering.filters import FilterSet
+from django_filtering import filters
 
 from . import models
 
 
-class ParticipantFilterSet(FilterSet):
+class ParticipantFilterSet(filters.FilterSet):
+    name = filters.Filter(filters.InputLookup('icontains', label='contains'))
+
     class Meta:
         model = models.Participant
-        filters = '__all__'

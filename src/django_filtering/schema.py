@@ -16,22 +16,21 @@ class FilteringOptionsSchema:
             "not": {"type": "operator", "label": "None of..."},
         }
         filters = {}
-        for filter_name, lookups in self.filterset.valid_filters.items():
-            field = self._get_field(filter_name)
+        for filter in self.filterset.filters:
+            field = self._get_field(filter.name)
             if field.is_relation:
                 # FIXME Ideally we aren't dropping relational fields,
                 #       but these are a feature not entirely needed at this time.
                 continue
             info = {
-                "type": "field",
-                "field_type": "string",
-                "lookups": lookups,
-                "label": field.verbose_name.title(),
+                "default_lookup": filter.default_lookup,
+                "lookups": {lu.name: {"type": "input", "label": lu.label} for lu in filter.lookups},
+                "label": filter.label if filter.label else field.verbose_name.title(),
             }
             if field.help_text:
                 info['description'] = field.help_text
             # TODO nargs
-            filters[filter_name] = info
+            filters[filter.name] = info
         return {'operators': operators, 'filters': filters}
 
     def __str__(self):
@@ -82,17 +81,17 @@ class JSONSchema:
         definitions = BASE_DEFINITIONS.copy()
         # Listing of all defined fields to produce the `#/$defs/filters` definition
         fields = []
-        for filter_name, lookups in self.filterset.valid_filters.items():
-            name = f"{filter_name}-filter"
+        for filter in self.filterset.filters:
+            name = f"{filter.name}-filter"
             fields.append(name)
             definitions[name] = {
                 "type": "array",
                 "prefixItems": [
-                    {"const": filter_name},
+                    {"const": filter.name},
                     {
                         "type": "object",
                         "properties": {
-                            "lookup": {"enum": lookups},
+                            "lookup": {"enum": [l.name for l in filter.lookups]},
                             "value": {"type": "string"},
                         },
                     },

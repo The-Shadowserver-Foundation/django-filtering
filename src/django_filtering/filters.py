@@ -1,51 +1,90 @@
 import jsonschema
 from django.conf import settings
 from django.db.models import QuerySet
-from referencing import Registry
 
 from .query import Q
 from .schema import JSONSchema, FilteringOptionsSchema
 
 
-class FilterSetOptions:
-    def __init__(self, options=None):
+class InputLookup:
+    """
+    Represents an text input type field lookup.
+    The ``name`` is a valid field lookup (e.g. `icontains`, `exact`).
+    The ``label`` is the human readable name for the lookup.
+    This may be used by the frontend implemenation to display
+    the lookup's relationship to a field.
+    """
+
+    def __init__(self, name, label=None):
+        self.name = name
+        self.label = label
+
+
+class Filter:
+    """
+    The model field to filter on using the given ``lookups``.
+    The ``default_lookup`` is intended to be used by the frontend
+    to auto-select the lookup relationship.
+    The ``label`` is the human readable name of the field.
+
+    The ``name`` attribute is assigned by the FilterSet's metaclass.
+    """
+    name = None
+
+    def __init__(self, *lookups, default_lookup=None, label=None):
+        self.lookups = lookups
+        self.default_lookup = default_lookup
+        self.label = label
+
+
+class RequiredOption(Exception):
+    """
+    Raised when a Meta class option is undefined and required.
+    """
+
+
+class Options:
+    """
+    FilterSet Meta class Options.
+    This class is used to instantiate ``FilterSet._meta``.
+    """
+
+    def __init__(self, base_filters=None, options=None):
         self.model = getattr(options, "model", None)
-        self.filters = getattr(options, "filters", None)
+        if self.model is None:
+            raise RequiredOption("Option `model` is Required.")
+        self._filters = base_filters if base_filters else []
 
-    def _match_all(self) -> bool:
-        return not self.filters or self.filters == '__all__'
-
-    def match_field(self, field_name: str) -> bool:
-        if self._match_all():
-            return True
-        return field_name in self.filters
-
-    def match_field_lookup(self, field_name: str, lookup_name: str) -> bool:
-        if self._match_all():
-            return True
-        return lookup_name in self.filters[field_name]
+    @property
+    def filters(self):
+        return self._filters
 
 
 class FilterSetMetaclass(type):
     def __new__(mcs, name, bases, attrs):
-        new_class = super().__new__(mcs, name, bases, attrs)
+        super_new = super().__new__
+        # Capture the meta configuration
+        meta_attrs = attrs.pop('Meta', {})
 
+        # Pull out filters from the class definition
+        filters = []
+        cls_attrs = {}
+        for a, v in attrs.items():
+            if not isinstance(v, Filter):
+                cls_attrs[a] = v
+                continue
+            v.name = a
+            filters.append(v)
+
+        # Return the base class without additional alterations
         if bases == (BaseFilterSet,):
-            return new_class
+            return super_new(mcs, name, bases, cls_attrs)
 
-        opts = new_class._meta = FilterSetOptions(getattr(new_class, "Meta", None))
+        # Declare meta class options for runtime usage
+        cls_attrs['_meta'] = Options(filters, meta_attrs)
 
-        filters = {}
-        for field in opts.model._meta.get_fields():
-            if opts.match_field(field.name):
-                lookups = {lookup_name for lookup_name in field.get_lookups().keys() if opts.match_field_lookup(field.name, lookup_name)}
-                # Coerce to list for JSON encoding and sort for idempotence
-                lookups = sorted(list(lookups))
-                filters[field.name] = lookups
-
-        new_class.valid_filters = filters
-
-        return new_class
+        # Create the new class
+        return super_new(mcs, name, bases, cls_attrs)
 
 
 class InvalidQueryData(Exception):
@@ -71,6 +110,10 @@ class BaseFilterSet:
         # Create the filtering options schema
         # to provide the frontend with the available filtering options.
         self.filtering_options_schema = FilteringOptionsSchema(self)
+
+    @property
+    def filters(self):
+        return self._meta.filters
 
     def get_queryset(self):
         return self._meta.model.objects.all()
