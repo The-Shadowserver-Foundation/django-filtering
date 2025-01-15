@@ -167,7 +167,8 @@ class BaseFilterSet:
         if not self.is_valid:
             raise InvalidFilterSet(
                 "The query is invalid! "
-                "Hint, check `is_valid` before running `filter_queryset`."
+                "Hint, check `is_valid` before running `filter_queryset`.\n"
+                f"Errors:\n{self._errors}"
             )
         if queryset is None:
             queryset = self.get_queryset()
