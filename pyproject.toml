@@ -29,6 +29,10 @@ tests = ["pytest", "pytest-django", "ipdb", "model_bakery"]
 Homepage = "https://github.com/mmulich/django-filtering"
 Issues = "https://github.com/mmulich/django-filtering/issues"
 
+[tool.hatch.build.targets.sdist]
+exclude = [".*/*"]
+
+
 [tool.hatch.build.targets.wheel]
 only-packages = true
 
