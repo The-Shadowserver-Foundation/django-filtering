@@ -77,7 +77,7 @@ class Filter:
             "lookups": lookups,
             "label": self.label
         }
-        if field.help_text:
+        if hasattr(field, "help_text") and field.help_text:
             info['description'] = field.help_text
         return info
 
