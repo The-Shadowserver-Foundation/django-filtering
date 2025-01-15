@@ -1,11 +1,13 @@
 import json
 
+import pytest
 from jsonschema.protocols import Validator
+from model_bakery import baker
 
 from django_filtering import filters
 from django_filtering.schema import FilteringOptionsSchema, JSONSchema
 
-from tests.lab_app.models import Participant
+from tests.lab_app import models
 from tests.lab_app.filters import ParticipantFilterSet
 
 
@@ -34,7 +36,7 @@ class TestJsonSchema:
             )
 
             class Meta:
-                model = Participant
+                model = models.Participant
 
         filterset = ScopedFilterSet()
         json_schema = JSONSchema(filterset)
@@ -109,7 +111,7 @@ class TestFilteringOptionsSchema:
             }},
         }
 
-        class ScopedFilterSet(filters.FilterSet):
+        class TestFilterSet(filters.FilterSet):
             age = filters.Filter(
                 filters.InputLookup('gte', label="greater than or equal to"),
                 filters.InputLookup('lte', label="less than or equal to"),
@@ -123,9 +125,9 @@ class TestFilteringOptionsSchema:
             )
 
             class Meta:
-                model = Participant
+                model = models.Participant
 
-        filterset = ScopedFilterSet()
+        filterset = TestFilterSet()
         schema = FilteringOptionsSchema(filterset)
 
         # Check for operators
@@ -147,3 +149,63 @@ class TestFilteringOptionsSchema:
 
         assert json.dumps(schema.schema) == str(schema)
         assert json.loads(str(schema))
+
+    @pytest.mark.django_db
+    def test_with_foreign_relation_field(self):
+        participants = [baker.make(models.Participant) for i in range(0, 4)]
+
+        expected_schema = {
+            "state": {
+                "default_lookup": "exact",
+                "label": "State",
+                "lookups": {
+                    "exact": {
+                        "type": "choice",
+                        "label": "is",
+                        "choices": [
+                            (0, 'Drafting'),
+                            (10, 'Cancelled'),
+                            (20, 'Opened'),
+                            (30, 'Reviewing'),
+                            (40, 'Closed'),
+                        ],
+                    },
+                },
+            },
+            "participants": {
+                "default_lookup": "exact",
+                "label": "Participant",
+                "lookups": {
+                    "exact": {
+                        "type": "choice",
+                        "label": "is",
+                        "choices": [(p.id, str(p),) for p in participants],
+                    },
+                },
+            }
+        }
+
+        class TestFilterSet(filters.FilterSet):
+            state = filters.Filter(
+                filters.ChoiceLookup('exact', label='is'),
+                default_lookup='exact',
+                label="State",
+            )
+            participants = filters.Filter(
+                filters.ChoiceLookup('exact', label='is'),
+                default_lookup='exact',
+                label="Participant",
+            )
+
+            class Meta:
+                model = models.Study
+
+        filterset = TestFilterSet()
+        schema = FilteringOptionsSchema(filterset)
+
+        # Check for the valid FilterSet
+        assert sorted(schema.schema['filters'].keys()) == sorted(expected_schema.keys())
+
+        # Check for filters
+        for name, info in expected_schema.items():
+            assert schema.schema['filters'][name] == info

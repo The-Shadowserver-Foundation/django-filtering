@@ -18,10 +18,6 @@ class FilteringOptionsSchema:
         filters = {}
         for filter in self.filterset.filters:
             field = self._get_field(filter.name)
-            if field.is_relation:
-                # FIXME Ideally we aren't dropping relational fields,
-                #       but these are a feature not entirely needed at this time.
-                continue
             filters[filter.name] = filter.get_options_schema_info(field)
         return {'operators': operators, 'filters': filters}
 

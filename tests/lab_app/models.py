@@ -22,3 +22,17 @@ class Participant(models.Model):
 
     class Meta:
         ordering = ["id"]
+
+
+class Study(models.Model):
+
+    class State(models.IntegerChoices):
+        DRAFT = 0, "Drafting"
+        CANCEL = 10, "Cancelled"
+        OPEN = 20, "Opened"
+        REVIEW = 30, "Reviewing"
+        CLOSE = 40, "Closed"
+
+    name = models.CharField(max_length=255)
+    state = models.IntegerField(choices=State, default=State.DRAFT)
+    participants = models.ManyToManyField(Participant, blank=True)
