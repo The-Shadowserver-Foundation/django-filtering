@@ -19,10 +19,10 @@ class TestJsonSchema:
         """
         valid_filters = {
             "age": ["gte", "lte"],
-            "sex": ["icontains"],
+            "sex": ["exact"],
         }
 
-        class ScopedFilterSet(filters.FilterSet):
+        class TestFilterSet(filters.FilterSet):
             age = filters.Filter(
                 filters.InputLookup('gte', label="greater than or equal to"),
                 filters.InputLookup('lte', label="less than or equal to"),
@@ -30,15 +30,15 @@ class TestJsonSchema:
                 label="Age",
             )
             sex = filters.Filter(
-                filters.InputLookup('icontains', label='contains'),
-                default_lookup='icontains',
+                filters.ChoiceLookup('exact', label='is'),
+                default_lookup='exact',
                 label="Sex",
             )
 
             class Meta:
                 model = models.Participant
 
-        filterset = ScopedFilterSet()
+        filterset = TestFilterSet()
         json_schema = JSONSchema(filterset)
         schema = json_schema.schema
 
