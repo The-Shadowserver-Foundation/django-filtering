@@ -18,13 +18,15 @@ class BaseLookup:
 
     def __init__(self, name, label=None):
         self.name = name
+        if label is None:
+            raise ValueError("At this time, the lookup label must be provided.")
         self.label = label
 
     def get_options_schema_definition(self, field):
         """Returns a dict for use by the options schema."""
         return {
             "type": self.type,
-            "label": self.label if self.label else field.verbose_name.title(),
+            "label": self.label,
         }
 
 
@@ -59,7 +61,11 @@ class Filter:
 
     def __init__(self, *lookups, default_lookup=None, label=None):
         self.lookups = lookups
+        if default_lookup is None:
+            raise ValueError("At this time, the default_lookup must be provided.")
         self.default_lookup = default_lookup
+        if label is None:
+            raise ValueError("At this time, the filter label must be provided.")
         self.label = label
 
     def get_options_schema_info(self, field):
@@ -69,7 +75,7 @@ class Filter:
         info = {
             "default_lookup": self.default_lookup,
             "lookups": lookups,
-            "label": self.label if self.label else field.verbose_name.title(),
+            "label": self.label
         }
         if field.help_text:
             info['description'] = field.help_text
