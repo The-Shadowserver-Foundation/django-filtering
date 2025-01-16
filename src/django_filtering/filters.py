@@ -1,3 +1,5 @@
+import warnings
+
 import jsonschema
 from django.conf import settings
 from django.db.models import QuerySet
@@ -96,6 +98,15 @@ class Options:
 
     def __init__(self, base_filters=None, options=None):
         self.model = getattr(options, "model", None)
+        if getattr(options, "filters", None):
+            warnings.warn(
+                (
+                    "The FilterSet.Meta.filters property has been "
+                    "temporarily disabled. Instead, please subclass FilterSet "
+                    "and assign Filter attributes."
+                ),
+                UserWarning,
+            )
         if self.model is None:
             raise RequiredOption("Option `model` is Required.")
         self._filters = base_filters if base_filters else []
