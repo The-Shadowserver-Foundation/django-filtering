@@ -1,11 +1,11 @@
-from django_filtering import filters
+import django_filtering as filtering
 
 from . import models
 
 
-class ParticipantFilterSet(filters.FilterSet):
-    name = filters.Filter(
-        filters.InputLookup('icontains', label='contains'),
+class ParticipantFilterSet(filtering.FilterSet):
+    name = filtering.Filter(
+        filtering.InputLookup('icontains', label='contains'),
         default_lookup='icontains',
         label="Name",
     )

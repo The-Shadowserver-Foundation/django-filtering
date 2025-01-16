@@ -5,6 +5,7 @@ from jsonschema.protocols import Validator
 from model_bakery import baker
 
 from django_filtering import filters
+from django_filtering.filterset import FilterSet
 from django_filtering.schema import FilteringOptionsSchema, JSONSchema
 
 from tests.lab_app import models
@@ -22,7 +23,7 @@ class TestJsonSchema:
             "sex": ["exact"],
         }
 
-        class TestFilterSet(filters.FilterSet):
+        class TestFilterSet(FilterSet):
             age = filters.Filter(
                 filters.InputLookup('gte', label="greater than or equal to"),
                 filters.InputLookup('lte', label="less than or equal to"),
@@ -111,7 +112,7 @@ class TestFilteringOptionsSchema:
             }},
         }
 
-        class TestFilterSet(filters.FilterSet):
+        class TestFilterSet(FilterSet):
             age = filters.Filter(
                 filters.InputLookup('gte', label="greater than or equal to"),
                 filters.InputLookup('lte', label="less than or equal to"),
@@ -185,7 +186,7 @@ class TestFilteringOptionsSchema:
             }
         }
 
-        class TestFilterSet(filters.FilterSet):
+        class TestFilterSet(FilterSet):
             state = filters.Filter(
                 filters.ChoiceLookup('exact', label='is'),
                 default_lookup='exact',

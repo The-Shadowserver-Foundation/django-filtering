@@ -4,6 +4,7 @@ from model_bakery import baker
 from pytest_django import asserts
 
 from django_filtering import filters
+from django_filtering.filterset import FilterSet, InvalidFilterSet
 from django_filtering.query import Q
 
 from tests.lab_app.models import Participant
@@ -22,7 +23,7 @@ class TestFilterSetCreation:
         expect all fields and lookups to be valid for use.
         """
 
-        class ScopedFilterSet(filters.FilterSet):
+        class ScopedFilterSet(FilterSet):
             class Meta:
                 model = Participant
                 filters = '__all__'
@@ -50,7 +51,7 @@ class TestFilterSetCreation:
             "sex": ["exact"],
         }
 
-        class ScopedFilterSet(filters.FilterSet):
+        class ScopedFilterSet(FilterSet):
             class Meta:
                 model = Participant
                 filters = valid_filters
@@ -70,7 +71,7 @@ class TestFilterSetCreation:
             "sex": ["exact"],
         }
 
-        class TestFilterSet(filters.FilterSet):
+        class TestFilterSet(FilterSet):
             name = filters.Filter(
                 filters.InputLookup('icontains', label='contains'),
                 default_lookup="icontains",
@@ -246,5 +247,5 @@ class TestFilterSetQueryData:
         ]
         filterset = ParticipantFilterSet(data)
 
-        with pytest.raises(filters.InvalidFilterSet):
+        with pytest.raises(InvalidFilterSet):
             filterset.filter_queryset()
