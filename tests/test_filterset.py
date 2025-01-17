@@ -140,6 +140,17 @@ class TestFilterSetCreation:
         filterset = ParticipantFilterSet()
         assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == expected_filters
 
+    def test_metadata_exception_details(self):
+        """
+        Expect metadata exceptions to provide enough detail to find the problem class.
+        """
+        with pytest.raises(ValueError) as excinfo:
+
+            class TestMissingFilterSet(FilterSet):
+                pass
+
+        assert excinfo.match("TestMissingFilterSet errored")
+
 
 @pytest.mark.django_db
 class TestFilterQuerySet:

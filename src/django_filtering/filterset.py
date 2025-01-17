@@ -97,11 +97,18 @@ class FilterSetType(type):
         meta_opts['_defined_filters'] = filters
 
         # Declare meta class options for runtime usage
-        inherited_opts = merge_dicts(*[
+        opts = merge_dicts(*[
             cls._meta.get_inheritable_options()
             for cls in bases if isinstance(cls, FilterSetType)
-        ])
-        cls_attrs['_meta'] = Metadata(**merge_dicts(inherited_opts, meta_opts))
+        ], meta_opts)
+        try:
+            cls_attrs['_meta'] = Metadata(**opts)
+        except MetadataException as exc:
+            if isinstance(exc, RequiredMetadataError):
+                raise ValueError(
+                    f"Creation of {name} errored due "
+                    f"to a missing required metadata property: {exc.args[0]}"
+                )
 
         # Create the new class
         return super().__new__(mcs, name, bases, cls_attrs)
