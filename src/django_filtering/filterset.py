@@ -10,36 +10,42 @@ from .schema import JSONSchema, FilteringOptionsSchema
 from .utils import merge_dicts
 
 
-class RequiredOption(Exception):
+class MetadataException(Exception):
+    """
+    Base exception for Metadata exceptions
+    """
+
+
+class RequiredMetadataError(MetadataException):
     """
     Raised when a Meta class option is undefined and required.
     """
 
 
-class Options:
+class Metadata:
     """
-    FilterSet Meta class Options.
+    FilterSet metadata
     This class is used to instantiate ``FilterSet._meta``.
     """
 
-    PUBLIC_OPTION_ARGS = (
+    PUBLIC_KEYWORD_ARGS = (
         'abstract',
         'model',
         'filters',
     )
-    PRIVATE_OPTION_ARGS = (
+    PRIVATE_KEYWORD_ARGS = (
         '_inherited_filters',
         '_defined_filters',
     )
-    OPTION_ARGS = PUBLIC_OPTION_ARGS + PRIVATE_OPTION_ARGS
+    KEYWORD_ARGS = PUBLIC_KEYWORD_ARGS + PRIVATE_KEYWORD_ARGS
 
-    def __init__(self, **options):
-        self.is_abstract = options.get('abstract', False)
-        self.model = options.get("model", None)
+    def __init__(self, **kwargs):
+        self.is_abstract = kwargs.get('abstract', False)
+        self.model = kwargs.get("model", None)
         if self.model is None and not self.is_abstract:
-            raise RequiredOption("Option `model` is required.")
+            raise RequiredMetadataError("`model` is required.")
 
-        if options.get("filters", None):
+        if kwargs.get("filters", None):
             warnings.warn(
                 (
                     "The FilterSet.Meta.filters property has been "
@@ -49,7 +55,7 @@ class Options:
                 UserWarning,
             )
 
-        self._filters = options.get('_inherited_filters', []) + options.get('_defined_filters', [])
+        self._filters = kwargs.get('_inherited_filters', []) + kwargs.get('_defined_filters', [])
 
     def get_inheritable_options(self) -> dict:
         """
@@ -95,7 +101,7 @@ class FilterSetType(type):
             cls._meta.get_inheritable_options()
             for cls in bases if isinstance(cls, FilterSetType)
         ])
-        cls_attrs['_meta'] = Options(**merge_dicts(inherited_opts, meta_opts))
+        cls_attrs['_meta'] = Metadata(**merge_dicts(inherited_opts, meta_opts))
 
         # Create the new class
         return super().__new__(mcs, name, bases, cls_attrs)
