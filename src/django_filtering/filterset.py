@@ -4,11 +4,10 @@ import jsonschema
 from django.conf import settings
 from django.db.models import QuerySet
 
-
 from .filters import Filter
 from .query import Q
 from .schema import JSONSchema, FilteringOptionsSchema
-
+from .utils import merge_dicts
 
 
 class RequiredOption(Exception):
@@ -23,9 +22,24 @@ class Options:
     This class is used to instantiate ``FilterSet._meta``.
     """
 
-    def __init__(self, base_filters=None, options=None):
-        self.model = getattr(options, "model", None)
-        if getattr(options, "filters", None):
+    PUBLIC_OPTION_ARGS = (
+        'abstract',
+        'model',
+        'filters',
+    )
+    PRIVATE_OPTION_ARGS = (
+        '_inherited_filters',
+        '_defined_filters',
+    )
+    OPTION_ARGS = PUBLIC_OPTION_ARGS + PRIVATE_OPTION_ARGS
+
+    def __init__(self, **options):
+        self.is_abstract = options.get('abstract', False)
+        self.model = options.get("model", None)
+        if self.model is None and not self.is_abstract:
+            raise RequiredOption("Option `model` is required.")
+
+        if options.get("filters", None):
             warnings.warn(
                 (
                     "The FilterSet.Meta.filters property has been "
@@ -34,21 +48,35 @@ class Options:
                 ),
                 UserWarning,
             )
-        if self.model is None:
-            raise RequiredOption("Option `model` is Required.")
-        self._filters = base_filters if base_filters else []
+
+        self._filters = options.get('_inherited_filters', []) + options.get('_defined_filters', [])
+
+    def get_inheritable_options(self) -> dict:
+        """
+        Provides options that can be inherited by a subclass.
+        """
+        return {
+            'model': self.model,
+            '_inherited_filters': self._filters,
+        }
 
     @property
     def filters(self):
         return self._filters
 
 
-class FilterSetMetaclass(type):
+class FilterSetType(type):
     def __new__(mcs, name, bases, attrs):
-        super_new = super().__new__
         # Capture the meta configuration
-        meta_attrs = attrs.pop('Meta', {})
-        abstract = getattr(meta_attrs, 'abstract', False)
+        Meta = attrs.pop('Meta', None)
+        if Meta is None:
+            meta_opts = {}
+        else:
+            meta_opts = {k: v for k, v in Meta.__dict__.items() if not k.startswith('_')}
+
+        if not bases:
+            # Treat base FilterSet as abstract
+            meta_opts['abstract'] = True
 
         # Pull out filters from the class definition
         filters = []
@@ -59,16 +87,18 @@ class FilterSetMetaclass(type):
                 continue
             v.name = a
             filters.append(v)
-
-        # Return the base class without additional alterations
-        if bases == (BaseFilterSet,) or abstract:
-            return super_new(mcs, name, bases, cls_attrs)
+        # Prepare definitions in meta options
+        meta_opts['_defined_filters'] = filters
 
         # Declare meta class options for runtime usage
-        cls_attrs['_meta'] = Options(filters, meta_attrs)
+        inherited_opts = merge_dicts(*[
+            cls._meta.get_inheritable_options()
+            for cls in bases if isinstance(cls, FilterSetType)
+        ])
+        cls_attrs['_meta'] = Options(**merge_dicts(inherited_opts, meta_opts))
 
         # Create the new class
-        return super_new(mcs, name, bases, cls_attrs)
+        return super().__new__(mcs, name, bases, cls_attrs)
 
 
 class InvalidQueryData(Exception):
@@ -79,7 +109,7 @@ class InvalidFilterSet(Exception):
     pass
 
 
-class BaseFilterSet:
+class FilterSet(metaclass=FilterSetType):
 
     def __init__(self, query_data=None):
         self.query_data = query_data
@@ -171,10 +201,6 @@ class BaseFilterSet:
         # Translate to Q objects
         if not self._errors:
             self._query = Q.from_query_data(self.query_data)
-
-
-class FilterSet(BaseFilterSet, metaclass=FilterSetMetaclass):
-    pass
 
 
 def filterset_factory(model, base_cls=FilterSet, filters='__all__'):

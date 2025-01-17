@@ -93,7 +93,52 @@ class TestFilterSetCreation:
                 model = Participant
 
         filterset = TestFilterSet()
-        assert {f.name: [l.name for l in f.lookups] for f in  filterset.filters} == valid_filters
+        assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == valid_filters
+
+
+    def test_subclassing_carries_defintions(self):
+        """
+        Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
+        Expect FilterSet set to abstract to not raise when `model` option is missing.
+        """
+        expected_filters = {
+            "name": ["icontains"],
+            "age": ["gte", "lte"],
+        }
+
+        # Define a base filterset class
+        class LabFilterSet(FilterSet):
+            name = filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                default_lookup="icontains",
+                label="Name",
+            )
+
+            class Meta:
+                abstract = True
+
+        # Define a class that subclasses the base filterset.
+        class ParticipantFilterSet(LabFilterSet):
+            age = filters.Filter(
+                filters.InputLookup('gte', label="greater than or equal to"),
+                filters.InputLookup('lte', label="less than or equal to"),
+                default_lookup="gte",
+                label="Age",
+            )
+
+            class Meta:
+                model = Participant
+
+        # Expect resulting classes not to have Meta class attribute
+        assert not hasattr(LabFilterSet, 'Meta')
+        assert not hasattr(ParticipantFilterSet, 'Meta')
+
+        # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
+        assert [f.name for f in ParticipantFilterSet._meta.filters] == ['name', 'age']
+
+        # Check for the expected filters and lookups
+        filterset = ParticipantFilterSet()
+        assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == expected_filters
 
 
 @pytest.mark.django_db
