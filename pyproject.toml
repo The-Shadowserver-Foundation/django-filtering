@@ -26,8 +26,8 @@ dependencies = ["django>=4.2", "jsonschema"]
 tests = ["pytest", "pytest-django", "ipdb", "model_bakery"]
 
 [project.urls]
-Homepage = "https://github.com/mmulich/django-filtering"
-Issues = "https://github.com/mmulich/django-filtering/issues"
+Homepage = "https://github.com/The-Shadowserver-Foundation/django-filtering"
+Issues = "https://github.com/The-Shadowserver-Foundation/django-filtering/issues"
 
 [tool.hatch.build.targets.sdist]
 exclude = [".*/*"]
