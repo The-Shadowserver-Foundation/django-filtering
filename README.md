@@ -9,6 +9,10 @@ The original usecase for this project required the following:
 - provides the ability to group filters by operator
 - serializes, validates, etc.
 
+A user interface (UI) is available for this package in the
+[`django-filtering-ui`](https://github.com/The-Shadowserver-Foundation/django-filtering-ui/)
+package.
+
 ## Installation
 
 Install via pip or the preferred package manager:
