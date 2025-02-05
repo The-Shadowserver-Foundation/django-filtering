@@ -27,7 +27,7 @@ def deconstruct_field_lookup_arg(field, value):
     if len(lookups) == 1:
         lookups = lookups[0]
 
-    return (field_name, {"lookup": lookups, "value": value})
+    return [field_name, {"lookup": lookups, "value": value}]
 
 
 class Q(BaseQ):
@@ -61,16 +61,16 @@ class Q(BaseQ):
             value = deconstruct_field_lookup_arg(*self.children[0])
         else:
             cls = self.__class__
-            value = (
+            value = [
                 self.connector.lower(),
-                tuple(
+                list(
                     child.to_query_data()
                     if isinstance(child, cls)
                     else deconstruct_field_lookup_arg(*child)
                     for child in self.children
                 ),
-            )
+            ]
 
         if self.negated:
-            value = ("not", value)
+            value = ["not", value]
         return value

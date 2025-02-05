@@ -94,54 +94,54 @@ class TestQ:
     def test_to_query_data(self):
         q = Q(("title__icontains", "stove"), _connector=Q.AND)
         data = q.to_query_data()
-        expected = (
+        expected = [
             "title",
             {"lookup": "icontains", "value": "stove"},
-        )
+        ]
         assert data == expected
 
         q = Q(("title__icontains", "stove"), _connector=Q.AND, _negated=True)
         data = q.to_query_data()
-        expected = ("not", ("title", {"lookup": "icontains", "value": "stove"}))
+        expected = ["not", ["title", {"lookup": "icontains", "value": "stove"}]]
         assert data == expected
 
         q = ~(Q(title__icontains="stove") | Q(title__icontains="oven"))
         data = q.to_query_data()
-        expected = (
+        expected = [
             "not",
-            (
+            [
                 "or",
-                (
-                    (
+                [
+                    [
                         "title",
                         {"lookup": "icontains", "value": "stove"},
-                    ),
-                    (
+                    ],
+                    [
                         "title",
                         {"lookup": "icontains", "value": "oven"},
-                    ),
-                ),
-            ),
-        )
+                    ],
+                ],
+            ],
+        ]
         assert data == expected
 
         q = Q(title__icontains="stove") | (
             Q(title__icontains="oven") & ~Q(title__icontains="microwave")
         )
         data = q.to_query_data()
-        expected = (
+        expected = [
             "or",
-            (
-                ("title", {"lookup": "icontains", "value": "stove"}),
-                (
+            [
+                ["title", {"lookup": "icontains", "value": "stove"}],
+                [
                     "and",
-                    (
-                        ("title", {"lookup": "icontains", "value": "oven"}),
-                        ("not", ("title", {"lookup": "icontains", "value": "microwave"})),
-                    ),
-                ),
-            ),
-        )
+                    [
+                        ["title", {"lookup": "icontains", "value": "oven"}],
+                        ["not", ["title", {"lookup": "icontains", "value": "microwave"}]],
+                    ],
+                ],
+            ],
+        ]
         assert data == expected
 
         q = (
@@ -157,25 +157,25 @@ class TestQ:
             )
         )
         data = Q.to_query_data(q)
-        expected = (
+        expected = [
             "and",
-            (
-                ("category", {"lookup": "in", "value": ["Kitchen", "Bath"]}),
-                ("stocked", {"lookup": ["year", "gte"], "value": "2024"}),
-                (
+            [
+                ["category", {"lookup": "in", "value": ["Kitchen", "Bath"]}],
+                ["stocked", {"lookup": ["year", "gte"], "value": "2024"}],
+                [
                     "or",
-                    (
-                        (
+                    [
+                        [
                             "and",
-                            (
-                                ("title", {"lookup": "icontains", "value": "soap"}),
-                                ("title", {"lookup": "icontains", "value": "hand"}),
-                                ("not", ("title", {"lookup": "icontains", "value": "lotion"})),
-                            ),
-                        ),
-                        ("brand", {"lookup": "iexact", "value": "Safe Soap"}),
-                    ),
-                ),
-            ),
-        )
+                            [
+                                ["title", {"lookup": "icontains", "value": "soap"}],
+                                ["title", {"lookup": "icontains", "value": "hand"}],
+                                ["not", ["title", {"lookup": "icontains", "value": "lotion"}]],
+                            ],
+                        ],
+                        ["brand", {"lookup": "iexact", "value": "Safe Soap"}],
+                    ],
+                ],
+            ],
+        ]
         assert data == expected
