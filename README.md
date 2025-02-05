@@ -80,8 +80,10 @@ For the moment the container is simply run with:
 
 Then I execute commands on the shell within it:
 
+    docker exec django-filtering pip install -e '.[tests]'
     docker exec -it django-filtering bash
 
+Within the container's shell you can now execute `pytest`.
 
 ## License
 
