@@ -1,7 +1,7 @@
 from django.db.models import Q as BaseQ
 
 
-DEFAULT_LOOKUP = "iexact"
+DEFAULT_LOOKUP = "exact"
 
 
 def construct_field_lookup_arg(field, value=None, lookup=DEFAULT_LOOKUP):
@@ -18,13 +18,15 @@ def construct_field_lookup_arg(field, value=None, lookup=DEFAULT_LOOKUP):
     return (f"{field}__{lookup_expr}", value)
 
 
-def deconstruct_field_lookup_arg(field, value):
+def deconstruct_field_lookup_arg(field, value, default_lookup=DEFAULT_LOOKUP):
     """
     Given a field name with lookup value,
     deconstruct it into a __query data__ structure.
     """
     field_name, *lookups = field.split("__")
-    if len(lookups) == 1:
+    if not lookups:
+        lookups = default_lookup
+    elif len(lookups) == 1:
         lookups = lookups[0]
 
     return [field_name, {"lookup": lookups, "value": value}]

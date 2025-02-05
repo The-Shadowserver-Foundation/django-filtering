@@ -86,7 +86,7 @@ class TestQ:
                     & Q(title__icontains="hand")
                     & ~Q(title__icontains="lotion")
                 )
-                | Q(brand__iexact="Safe Soap")
+                | Q(brand__exact="Safe Soap")
             )
         )
         assert q == expected
