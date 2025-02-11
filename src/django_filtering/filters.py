@@ -38,12 +38,33 @@ class InputLookup(BaseLookup):
 class ChoiceLookup(BaseLookup):
     """
     Represents a choice selection input type field lookup.
+
+    The choices will populate from the field's choices.
+    Unless explict choices are defined via the ``choices`` argument.
+    The ``choices`` argument can be a static list of choices
+    or a function that returns a list of choices.
+
     """
     type = 'choice'
 
+    def __init__(self, *args, choices=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._choices = choices
+
     def get_options_schema_definition(self, field):
         definition = super().get_options_schema_definition(field)
-        definition['choices'] = list(field.get_choices(include_blank=False))
+        choices = None
+
+        # Use the field's choices or the developer defined choices
+        if self._choices is None:
+            choices = list(field.get_choices(include_blank=False))
+        else:
+            if callable(self._choices):
+                choices = self._choices(lookup=self, field=field)
+            else:
+                choices = self._choices
+
+        definition['choices'] = choices
         return definition
 
 
