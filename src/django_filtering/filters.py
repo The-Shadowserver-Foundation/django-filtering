@@ -81,9 +81,11 @@ class Filter:
 
     def __init__(self, *lookups, default_lookup=None, label=None):
         self.lookups = lookups
-        if default_lookup is None:
-            raise ValueError("At this time, the default_lookup must be provided.")
-        self.default_lookup = default_lookup
+        # Ensure at least one lookup has been defined.
+        if len(self.lookups) == 0:
+            raise ValueError("Must specify at least one lookup for the filter (e.g. InputLookup).")
+        # Assign the default lookup to use or default to the first defined lookup.
+        self.default_lookup = default_lookup if default_lookup else self.lookups[0].name
         if label is None:
             raise ValueError("At this time, the filter label must be provided.")
         self.label = label

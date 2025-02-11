@@ -118,10 +118,28 @@ class TestFilter:
         assert exc_info.value.args[0] == "At this time, the filter label must be provided."
 
     def test_init_wo_default_lookup(self):
-        with pytest.raises(ValueError) as exc_info:
-            filters.Filter(filters.InputLookup('icontains', label='contains'), label='name')
-        assert exc_info.type is ValueError
-        assert exc_info.value.args[0] == "At this time, the default_lookup must be provided."
+        # Target
+        filter = filters.Filter(
+            filters.InputLookup('exact', label='matches'),
+            filters.InputLookup('icontains', label='contains'),
+            label='name',
+        )
+
+        # Expect first lookup to be the default
+        assert filter.default_lookup == 'exact'
+
+    def test_init_w_default_lookup(self):
+        # Target
+        filter = filters.Filter(
+            filters.InputLookup('exact', label='exactly matches'),
+            filters.InputLookup('iexact', label='case insensitively matches'),
+            filters.InputLookup('icontains', label='contains'),
+            default_lookup='iexact',
+            label='name',
+        )
+
+        # Expect first lookup to be the default
+        assert filter.default_lookup == 'iexact'
 
     def test_get_options_schema_info(self):
         label = "Pages"
