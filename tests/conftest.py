@@ -16,6 +16,7 @@ def pytest_configure(config):
         INSTALLED_APPS=[
             "django_filtering",
             "tests.lab_app",
+            "tests.market_app",
         ],
     )
 

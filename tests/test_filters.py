@@ -1,5 +1,5 @@
 import pytest
-import django.db.models
+from django.db import models
 
 from django_filtering import filters
 
@@ -11,7 +11,7 @@ class TestInputLookup:
 
     def test(self):
         label = ">="
-        field = django.db.models.IntegerField(name='count')
+        field = models.IntegerField(name='count')
 
         # Target
         lookup = filters.InputLookup('gte', label=label)
@@ -30,11 +30,11 @@ class TestChoiceLookup:
     def test(self):
         label = "is"
 
-        class Type(django.db.models.TextChoices):
+        class Type(models.TextChoices):
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        field = django.db.models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
+        field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
 
         # Target
         lookup = filters.ChoiceLookup('exact', label=label)
@@ -51,11 +51,11 @@ class TestChoiceLookup:
     def test_static_choices(self):
         label = "is"
 
-        class Type(django.db.models.TextChoices):
+        class Type(models.TextChoices):
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        target_field = django.db.models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
+        target_field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
         static_choices = [
             ('any', 'Any'),
             ('manual', 'Manual'),
@@ -77,11 +77,11 @@ class TestChoiceLookup:
     def test_dynamic_choices(self):
         label = "is"
 
-        class Type(django.db.models.TextChoices):
+        class Type(models.TextChoices):
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        target_field = django.db.models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
+        target_field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
         static_choices = [
             ('any', 'Any'),
             ('manual', 'Manual'),
@@ -143,7 +143,7 @@ class TestFilter:
 
     def test_get_options_schema_info(self):
         label = "Pages"
-        field = django.db.models.IntegerField(name='pages')
+        field = models.IntegerField(name='pages')
         lookups_data = (
             [filters.InputLookup, ('gte',), {'label': '>='}],
             [filters.InputLookup, ('lte',), {'label': '<='}],
@@ -169,3 +169,28 @@ class TestFilter:
             },
         }
         assert options_schema_info == expected
+
+    def test_translate_to_Q_arg(self):
+        label = "Pages"
+        choices = [
+            ('10', '10'),
+            ('50', '50'),
+            ('100', '100'),
+            ('200', '200'),
+        ]
+        lookups_data = (
+            [filters.InputLookup, ('exact',), {'label': '='}],
+            [filters.ChoiceLookup, ('gte',), {'label': '>=', 'choices': choices}],
+            [filters.ChoiceLookup, ('lte',), {'label': '<=', 'choices': choices}],
+        )
+
+        # Create the filter
+        filter = filters.Filter(
+            *[cls(*a, **kw) for cls, a, kw in lookups_data],
+            label=label,
+        )
+        filter.name = 'pages'
+
+        # Check translation of _query data's criteria_ to django Q argument
+        criteria = {'lookup': 'gte', 'value': '50'}
+        assert filter.translate_to_Q_arg(**criteria) == ('pages__gte', '50')

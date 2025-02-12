@@ -1,3 +1,8 @@
+from typing import Any, Tuple
+
+from .utils import construct_field_lookup_arg
+
+
 __all__ = (
     'ChoiceLookup',
     'InputLookup',
@@ -102,3 +107,10 @@ class Filter:
         if hasattr(field, "help_text") and field.help_text:
             info['description'] = field.help_text
         return info
+
+    def translate_to_Q_arg(self, value, **kwargs) -> Tuple[str, Any]:
+        """
+        Translates the query data criteria to a Q argument.
+        """
+        lookup = kwargs.get('lookup', self.default_lookup)
+        return construct_field_lookup_arg(self.name, value, lookup)

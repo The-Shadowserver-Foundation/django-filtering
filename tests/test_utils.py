@@ -1,4 +1,4 @@
-from django_filtering.utils import merge_dicts
+from django_filtering.utils import construct_field_lookup_arg, merge_dicts
 
 
 def test_merge_dicts():
@@ -16,3 +16,8 @@ def test_merge_dicts__with_no_args():
     expected = merging = []
     expected = {}
     assert merge_dicts(*merging) == expected
+
+
+def test_construct_field_lookup_arg():
+    assert construct_field_lookup_arg('state', 'Complete') == ('state', 'Complete')
+    assert construct_field_lookup_arg('name', 'foo', 'icontains') == ('name__icontains', 'foo')

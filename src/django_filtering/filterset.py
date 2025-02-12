@@ -1,11 +1,11 @@
 import warnings
+from typing import Any, Tuple
 
 import jsonschema
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 
 from .filters import Filter
-from .query import Q
 from .schema import JSONSchema, FilteringOptionsSchema
 from .utils import merge_dicts
 
@@ -142,6 +142,14 @@ class FilterSet(metaclass=FilterSetType):
     def filters(self):
         return self._meta.filters
 
+    def _get_filter(self, name):
+        """
+        Get the filter object by name
+        """
+        for filter in self.filters:
+            if filter.name == name:
+                return filter
+
     def get_queryset(self):
         return self._meta.model.objects.all()
 
@@ -213,7 +221,39 @@ class FilterSet(metaclass=FilterSetType):
 
         # Translate to Q objects
         if not self._errors:
-            self._query = Q.from_query_data(self.query_data)
+            self._query = self._make_Q(self.query_data)
+
+    def _make_Q(self, query_data, _is_root=True) -> Q | Tuple[str, Any]:
+        """
+        Make a ``Q`` object out of the given query data.
+        """
+        if not query_data:
+            return None
+
+        key, value = query_data
+
+        is_negated = False
+        if key.upper() == "NOT":
+            is_negated = True
+            key, value = value
+
+        valid_connectors = (
+            Q.AND,
+            Q.OR,
+        )
+        if key.upper() in valid_connectors:
+            # Recurse of the values of the connector/operator.
+            return Q(
+                *(self._make_Q(v, _is_root=False) for v in value),
+                _connector=key.upper(),
+                _negated=is_negated,
+            )
+        else:
+            filter = self._get_filter(key)
+            if _is_root or is_negated:
+                return Q(filter.translate_to_Q_arg(**value), _negated=is_negated)
+            else:
+                return filter.translate_to_Q_arg(**value)
 
 
 def filterset_factory(model, base_cls=FilterSet, filters='__all__'):

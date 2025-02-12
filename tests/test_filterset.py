@@ -1,14 +1,15 @@
 import pytest
 
+from django.db.models.query_utils import Q
 from model_bakery import baker
 from pytest_django import asserts
 
 from django_filtering import filters
 from django_filtering.filterset import FilterSet, InvalidFilterSet
-from django_filtering.query import Q
 
 from tests.lab_app.models import Participant
 from tests.lab_app.filters import ParticipantFilterSet
+from tests.market_app.filters import ProductFilterSet
 
 
 class TestFilterSetCreation:
@@ -192,6 +193,113 @@ class TestFilterQuerySet:
         qs = filterset.filter_queryset(Participant.objects.filter(name__icontains="d"))
         # Check queryset equality
         assert list(qs) == [self.participants[-1]]
+
+
+class TestFilterSetTranslatesQueryData:
+    """
+    Test the ``FilterSet._make_Q`` method translates the query data to a ``Q`` object.
+    """
+
+    def make_filterset(self, query_data):
+        return ProductFilterSet(query_data)
+
+    def test(self):
+        # Simple test case that isn't actually valid query data,
+        # because the value of the root array must be a boolean operation
+        # (e.g. and, or, not).
+        data = (
+            "name",
+            {"lookup": "icontains", "value": "stove"},
+        )
+        filterset = self.make_filterset(data)
+        q = filterset._make_Q(filterset.query_data)
+        expected = Q(("name__icontains", "stove"), _connector=Q.AND)
+        assert q == expected
+
+        data = ("not", ("name", {"lookup": "icontains", "value": "stove"}))
+        filterset = self.make_filterset(data)
+        q = filterset._make_Q(filterset.query_data)
+        expected = Q(("name__icontains", "stove"), _connector=Q.AND, _negated=True)
+        assert q == expected
+
+        data = (
+            "not",
+            (
+                "or",
+                (
+                    (
+                        "name",
+                        {"lookup": "icontains", "value": "stove"},
+                    ),
+                    (
+                        "name",
+                        {"lookup": "icontains", "value": "oven"},
+                    ),
+                ),
+            ),
+        )
+        filterset = self.make_filterset(data)
+        q = filterset._make_Q(filterset.query_data)
+        expected = ~(Q(name__icontains="stove") | Q(name__icontains="oven"))
+        assert q == expected
+
+        data = (
+            "or",
+            (
+                ("name", {"lookup": "icontains", "value": "stove"}),
+                (
+                    "and",
+                    (
+                        ("name", {"lookup": "icontains", "value": "oven"}),
+                        ("not", ("name", {"lookup": "icontains", "value": "microwave"})),
+                    ),
+                ),
+            ),
+        )
+        filterset = self.make_filterset(data)
+        q = filterset._make_Q(filterset.query_data)
+        expected = Q(name__icontains="stove") | (
+            Q(name__icontains="oven") & ~Q(name__icontains="microwave")
+        )
+        assert q == expected
+
+        data = (
+            "and",
+            (
+                ("category", {"lookup": "in", "value": ["Kitchen", "Bath"]}),
+                ("stocked", {"lookup": ["year", "gte"], "value": "2024"}),
+                (
+                    "or",
+                    (
+                        (
+                            "and",
+                            (
+                                ("name", {"lookup": "icontains", "value": "soap"}),
+                                ("name", {"lookup": "icontains", "value": "hand"}),
+                                ("not", ("name", {"lookup": "icontains", "value": "lotion"})),
+                            ),
+                        ),
+                        # Note, the missing 'lookup' value, to test default lookup
+                        ("brand", {"value": "Safe Soap"}),
+                    ),
+                ),
+            ),
+        )
+        filterset = self.make_filterset(data)
+        q = filterset._make_Q(filterset.query_data)
+        expected = (
+            Q(category__in=["Kitchen", "Bath"])
+            & Q(stocked__year__gte="2024")
+            & (
+                (
+                    Q(name__icontains="soap")
+                    & Q(name__icontains="hand")
+                    & ~Q(name__icontains="lotion")
+                )
+                | Q(brand__exact="Safe Soap")
+            )
+        )
+        assert q == expected
 
 
 class TestFilterSetQueryData:
