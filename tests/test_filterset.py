@@ -200,24 +200,22 @@ class TestFilterSetTranslatesQueryData:
     Test the ``FilterSet._make_Q`` method translates the query data to a ``Q`` object.
     """
 
-    def make_filterset(self, query_data):
-        return ProductFilterSet(query_data)
-
     def test(self):
         # Simple test case that isn't actually valid query data,
         # because the value of the root array must be a boolean operation
         # (e.g. and, or, not).
+
         data = (
             "name",
             {"lookup": "icontains", "value": "stove"},
         )
-        filterset = self.make_filterset(data)
+        filterset = ProductFilterSet(data)
         q = filterset._make_Q(filterset.query_data)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND)
         assert q == expected
 
         data = ("not", ("name", {"lookup": "icontains", "value": "stove"}))
-        filterset = self.make_filterset(data)
+        filterset = ProductFilterSet(data)
         q = filterset._make_Q(filterset.query_data)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND, _negated=True)
         assert q == expected
@@ -238,7 +236,7 @@ class TestFilterSetTranslatesQueryData:
                 ),
             ),
         )
-        filterset = self.make_filterset(data)
+        filterset = ProductFilterSet(data)
         q = filterset._make_Q(filterset.query_data)
         expected = ~(Q(name__icontains="stove") | Q(name__icontains="oven"))
         assert q == expected
@@ -256,7 +254,7 @@ class TestFilterSetTranslatesQueryData:
                 ),
             ),
         )
-        filterset = self.make_filterset(data)
+        filterset = ProductFilterSet(data)
         q = filterset._make_Q(filterset.query_data)
         expected = Q(name__icontains="stove") | (
             Q(name__icontains="oven") & ~Q(name__icontains="microwave")
@@ -285,7 +283,7 @@ class TestFilterSetTranslatesQueryData:
                 ),
             ),
         )
-        filterset = self.make_filterset(data)
+        filterset = ProductFilterSet(data)
         q = filterset._make_Q(filterset.query_data)
         expected = (
             Q(category__in=["Kitchen", "Bath"])
