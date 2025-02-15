@@ -194,3 +194,43 @@ class TestFilter:
         # Check translation of _query data's criteria_ to django Q argument
         criteria = {'lookup': 'gte', 'value': '50'}
         assert filter.translate_to_Q_arg(**criteria) == ('pages__gte', '50')
+
+
+class TestStickyFilter:
+
+    def test(self):
+        """
+        This test case assumes usage in a FilterSet
+        with a model that has a 'type' field,
+        where the filter defaults to the 'Manual' choice.
+        """
+        label = "Type"
+        choices = [
+            ('any', 'Any'),
+            ('manual', 'Manual'),
+            ('bulk', 'Bulk'),
+        ]
+        unstick_value = 'any'
+        default_value = 'manual'
+
+        # Create the filter
+        filter = filters.StickyFilter(
+            filters.ChoiceLookup('exact', label='is', choices=choices),
+            label=label,
+            unstick_value=unstick_value,
+            default_value=default_value,
+        )
+        # Manually set the Filter's name attribute,
+        # which is otherwise handled by the FilterSet metaclass.
+        filter.name = 'type'
+
+        # Check translation of query data's criteria to django Q argument
+        criteria = {'lookup': 'exact', 'value': 'bulk'}
+        assert filter.translate_to_Q_arg(**criteria) == ('type__exact', 'bulk')
+
+        # Ensure value does not translate to a Q argument
+        criteria = {'lookup': 'exact', 'value': unstick_value}
+        assert filter.translate_to_Q_arg(**criteria) == None
+
+        # Check the default Q argument
+        assert filter.get_sticky_Q_arg() == ('type__exact', default_value)

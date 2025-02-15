@@ -7,6 +7,8 @@ __all__ = (
     'ChoiceLookup',
     'InputLookup',
     'Filter',
+    'StickyFilter',
+    'UNSTICK_VALUE',
 )
 
 
@@ -73,6 +75,11 @@ class ChoiceLookup(BaseLookup):
         return definition
 
 
+# A sentry value used to signal when a Filter has really been given
+# a value that should not be interpretted as queriable.
+UNSTICK_VALUE = object()
+
+
 class Filter:
     """
     The model field to filter on using the given ``lookups``.
@@ -108,9 +115,94 @@ class Filter:
             info['description'] = field.help_text
         return info
 
-    def translate_to_Q_arg(self, value, **kwargs) -> Tuple[str, Any]:
+    def to_cleaned_value(self, value):
+        """
+        Clean the value for database usage.
+        """
+        return value
+
+    def translate_to_Q_arg(self, value, **kwargs) -> Tuple[str, Any] | None:
         """
         Translates the query data criteria to a Q argument.
         """
         lookup = kwargs.get('lookup', self.default_lookup)
-        return construct_field_lookup_arg(self.name, value, lookup)
+        value = self.to_cleaned_value(value)
+        return construct_field_lookup_arg(
+            self.name,
+            value,
+            lookup,
+        )
+
+
+class StickyFilter(Filter):
+    """
+    A required filter that when present in FilterSet will produce
+    a query filter regardless of user input,
+    unless the user has specifically overridden the default.
+
+    The filter is present in the FilterSet regardless of the user's input.
+    It's not until the user sets this filter explicitly
+    to the unstick value--usually a choice--that the filter
+    will be removed from the overall query.
+
+    For example, a FilterSet with the model's ``status`` field
+    is set to default to ``'Complete```. However we also want to enable the user
+    to search for any status. We can achieve this by providing a sticky filter
+    that defaults to the desired value, but does not produce a query filter
+    when the value results in the unstick value (e.g. empty string or keyword).
+
+        class TaskFilterSet(FilterSet):
+            STATUS_CHOICES = [
+                ('any', 'Any'),
+                ('p', 'Pending'),
+                ('c', 'Complete'),
+            ]
+            status = StickyFilter(
+                ChoiceLookup('exact', label='is', choices=STATUS_CHOICES),
+                default_value='c',
+                unstick_value='any',
+                label="Status",
+            )
+            # ...
+
+    """
+    unstick_value = None
+
+    def __init__(self, *args, default_value=None, unstick_value=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if default_value is None:
+            raise ValueError(
+                "A StickyFilter requires a default_value keyword argument value "
+                "to correctly function. Please set the value."
+            )
+        self.default_value = default_value
+        self.unstick_value = unstick_value
+
+    def to_cleaned_value(self, value):
+        value = super().to_cleaned_value(value)
+        if value == self.unstick_value:
+            return UNSTICK_VALUE
+        return value
+
+    def get_sticky_Q_arg(self):
+        """
+        Returns the sticky Q argument
+        to be used when the filter is not within the user input.
+        """
+        return self.translate_to_Q_arg(value=self.default_value)
+
+    def translate_to_Q_arg(self, value, **kwargs) -> Tuple[str, Any] | None:
+        """
+        Translates the query data criteria to a Q argument.
+        """
+        lookup = kwargs.get('lookup', self.default_lookup)
+
+        value = self.to_cleaned_value(value)
+        if value is UNSTICK_VALUE:
+            return None
+
+        return construct_field_lookup_arg(
+            self.name,
+            value,
+            lookup,
+        )
