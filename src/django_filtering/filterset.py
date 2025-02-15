@@ -1,11 +1,11 @@
 import warnings
-from typing import Any, Tuple
+from typing import Any, List, Tuple
 
 import jsonschema
 from django.conf import settings
 from django.db.models import Q, QuerySet
 
-from .filters import Filter
+from .filters import Filter, StickyFilter
 from .schema import JSONSchema, FilteringOptionsSchema
 from .utils import merge_dicts
 
@@ -67,8 +67,15 @@ class Metadata:
         }
 
     @property
-    def filters(self):
+    def filters(self) -> List[Filter]:
         return self._filters
+
+    def get_filter(self, name: str) -> Filter:
+        return {f.name: f for f in self.filters}[name]
+
+    @property
+    def sticky_filters(self) -> List[Filter]:
+        return [f for f in self.filters if isinstance(f, StickyFilter)]
 
 
 class FilterSetType(type):
@@ -123,6 +130,10 @@ class InvalidFilterSet(Exception):
 
 
 class FilterSet(metaclass=FilterSetType):
+    valid_connectors = (
+        Q.AND,
+        Q.OR,
+    )
 
     def __init__(self, query_data=None):
         self.query_data = query_data
@@ -142,13 +153,15 @@ class FilterSet(metaclass=FilterSetType):
     def filters(self):
         return self._meta.filters
 
-    def _get_filter(self, name):
+    def _get_filter(self, name: str) -> Filter:
         """
         Get the filter object by name
         """
-        for filter in self.filters:
-            if filter.name == name:
-                return filter
+        return self._meta.get_filter(name)
+
+    @property
+    def sticky_filters(self):
+        return self._meta.sticky_filters
 
     def get_queryset(self):
         return self._meta.model.objects.all()
@@ -221,7 +234,9 @@ class FilterSet(metaclass=FilterSetType):
 
         # Translate to Q objects
         if not self._errors:
-            self._query = self._make_Q(self.query_data)
+            q = self._make_Q(self.query_data)
+            q = self._apply_sticky_filters(q)
+            self._query = q
 
     def _make_Q(self, query_data, _is_root=True) -> Q | Tuple[str, Any]:
         """
@@ -237,23 +252,50 @@ class FilterSet(metaclass=FilterSetType):
             is_negated = True
             key, value = value
 
-        valid_connectors = (
-            Q.AND,
-            Q.OR,
-        )
-        if key.upper() in valid_connectors:
-            # Recurse of the values of the connector/operator.
+        if key.upper() in self.valid_connectors:
+            # Recurively build query tree
+            q_children = [self._make_Q(v, _is_root=False) for v in value]
+            # Remove any `None` values, where filters have been conditionally removed.
+            q_children = (x for x in q_children if x)
+            if not q_children:
+                return Q(_connector=key.upper(), _negated=is_negated)
             return Q(
-                *(self._make_Q(v, _is_root=False) for v in value),
+                *q_children,
                 _connector=key.upper(),
                 _negated=is_negated,
             )
         else:
             filter = self._get_filter(key)
+            q_arg = filter.translate_to_Q_arg(**value)
             if _is_root or is_negated:
-                return Q(filter.translate_to_Q_arg(**value), _negated=is_negated)
+                return Q(q_arg, _negated=is_negated)
             else:
-                return filter.translate_to_Q_arg(**value)
+                return q_arg
+
+    def _apply_sticky_filters(self, q):
+        """
+        Apply sticky filters to the query filters.
+
+        Sticky filters are applied when the user provided query data
+        does not contain the sticky filter
+        or when the default value has been set to anything other than
+        the __unstick value__.
+        """
+        query_data_filter_names = {key for key, _ in self.query_data[1]}
+
+        sticky_q = Q()
+        for sf in self.sticky_filters:
+            if sf.name not in query_data_filter_names:
+                # Anding the sticky filter's default Q
+                sticky_q &= Q(sf.get_sticky_Q_arg())
+            # Note, at this point in the process,
+            # the sticky filter should not be part of the Q set,
+            # because the UNSTICK_VALUE has prevented it from being included.
+            # This assumes that `_make_Q`, and supporting method on `Filter`,
+            # are correctly implemented to exclude the filter from the Q set.
+            # Reminder, it is necessary for the sticky filter
+            # to be in the query data in order for it to be unstuck.
+        return sticky_q & q
 
 
 def filterset_factory(model, base_cls=FilterSet, filters='__all__'):

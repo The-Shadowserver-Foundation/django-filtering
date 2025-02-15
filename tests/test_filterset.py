@@ -9,7 +9,11 @@ from django_filtering.filterset import FilterSet, InvalidFilterSet
 
 from tests.lab_app.models import Participant
 from tests.lab_app.filters import ParticipantFilterSet
-from tests.market_app.filters import ProductFilterSet
+from tests.market_app.filters import (
+    KitchenProductFilterSet,
+    ProductFilterSet,
+    TopBrandKitchenProductFilterSet,
+)
 
 
 class TestFilterSetCreation:
@@ -297,6 +301,163 @@ class TestFilterSetTranslatesQueryData:
                 | Q(brand__exact="Safe Soap")
             )
         )
+        assert q == expected
+
+    def test_sticky_filters__missing_from_query_data(self):
+        """
+        Test when a sticky filter is not present in the user provided query data.
+        """
+        data = [
+            "and",
+            [
+                ["name", {"lookup": "icontains", "value": "sink"}],
+            ],
+        ]
+        filterset = KitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filter to be added to the query
+        expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
+        assert q == expected
+
+    def test_sticky_filter__default_in_query_data(self):
+        """
+        Test when a sticky filter is present with the default value
+        in the user provided query data.
+        """
+        data = [
+            "and",
+            [
+                ["category", {"lookup": "exact", "value": "Kitchen"}],
+                ["name", {"lookup": "icontains", "value": "sink"}],
+            ],
+        ]
+        filterset = KitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filter to be present
+        expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
+        assert q == expected
+
+    def test_sticky_filter__overridden_in_query_data(self):
+        """
+        Test when a sticky filter is present with a non-default value
+        in the user provided query data.
+        """
+        data = [
+            "and",
+            [
+                ["category", {"lookup": "exact", "value": "Bath"}],
+                ["name", {"lookup": "icontains", "value": "sink"}],
+            ],
+        ]
+        filterset = KitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filter to be present
+        expected = Q(("category__exact", "Bath")) & Q(("name__icontains", "sink"), _connector=Q.AND)
+        assert q == expected
+
+    def test_sticky_filter__unstick_value_in_query_data(self):
+        """
+        Test when a sticky filter is present with the unstick value
+        in the user provided query data.
+
+        This test case essentially tests for the removal
+        of the sticky filter from the overall query.
+        """
+        unstick_user_value = KitchenProductFilterSet._meta.sticky_filters[0].unstick_value
+        data = [
+            "and",
+            [
+                ["category", {"lookup": "exact", "value": unstick_user_value}],
+                ["name", {"lookup": "icontains", "value": "sink"}],
+            ],
+        ]
+        filterset = KitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filter NOT to be present
+        expected = Q(("name__icontains", "sink"), _connector=Q.AND)
+        assert q == expected
+
+    def test_several_sticky_filters__missing_from_query_data(self):
+        data = [
+            "and",
+            [
+                ["name", {"lookup": "icontains", "value": "faucet"}],
+            ],
+        ]
+        filterset = TopBrandKitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filter(s) to be present
+        expected = Q(
+            ('category__exact', 'Kitchen'),
+            ('brand__exact', 'MOEN'),
+            ("name__icontains", "faucet"),
+            _connector=Q.AND,
+        )
+        assert q == expected
+
+    def test_several_sticky_filters__default_in_query_data(self):
+        data = [
+            "and",
+            [
+                ["category", {"lookup": "exact", "value": "Kitchen"}],
+                ["name", {"lookup": "icontains", "value": "faucet"}],
+            ],
+        ]
+        filterset = TopBrandKitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filter(s) to be present
+        # Note, the order of these might seem wrong,
+        # because 'category' was defined before 'brand',
+        # but keep in mind the 'category' sticky filter was user provided.
+        expected = (
+            Q(('brand__exact', 'MOEN'))
+            & Q(("category__exact", "Kitchen"))
+            & Q(("name__icontains", "faucet"), _connector=Q.AND)
+        )
+        assert q == expected
+
+    def test_several_sticky_filters__overridden_in_query_data(self):
+        data = [
+            "and",
+            [
+                ["category", {"lookup": "exact", "value": "Bath"}],
+                ["brand", {"lookup": "exact", "value": "Glacier Bay"}],
+                ["name", {"lookup": "icontains", "value": "faucet"}],
+            ],
+        ]
+        filterset = TopBrandKitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filters to be present
+        expected = (
+            Q(("category__exact", "Bath"))
+            & Q(('brand__exact', 'Glacier Bay'))
+            & Q(("name__icontains", "faucet"), _connector=Q.AND)
+        )
+        assert q == expected
+
+    def test_several_sticky_filters__unstick_value_in_query_data(self):
+        category_unstick_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('category').unstick_value
+        brand_unstick_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('brand').unstick_value
+        data = [
+            "and",
+            [
+                ["brand", {"lookup": "exact", "value": brand_unstick_user_value}],
+                ["category", {"lookup": "exact", "value": category_unstick_user_value}],
+                ["name", {"lookup": "icontains", "value": "faucet"}],
+            ],
+        ]
+        filterset = TopBrandKitchenProductFilterSet(data)
+        filterset.validate()
+        q = filterset._query
+        # Expect the sticky filters NOT to be present
+        expected = Q(("name__icontains", "faucet"), _connector=Q.AND)
         assert q == expected
 
 
