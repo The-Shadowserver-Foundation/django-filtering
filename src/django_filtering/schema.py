@@ -15,11 +15,14 @@ class FilteringOptionsSchema:
             "or": {"type": "operator", "label": "Any of..."},
             "not": {"type": "operator", "label": "None of..."},
         }
-        filters = {}
-        for filter in self.filterset.filters:
-            field = self._get_field(filter.name)
-            filters[filter.name] = filter.get_options_schema_info(field)
-        return {'operators': operators, 'filters': filters}
+        filters = {
+            f.name: f.get_options_schema_info(self._get_field(f.name))
+            for f in self.filterset.filters
+        }
+        return {
+            'operators': operators,
+            'filters': filters,
+        }
 
     def __str__(self):
             return json.dumps(self.schema)

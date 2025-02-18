@@ -1,6 +1,6 @@
 from typing import Any, Tuple
 
-from .utils import construct_field_lookup_arg
+from .utils import construct_field_lookup_arg, deconstruct_field_lookup_arg
 
 
 __all__ = (
@@ -184,7 +184,7 @@ class StickyFilter(Filter):
             return UNSTICK_VALUE
         return value
 
-    def get_sticky_Q_arg(self):
+    def get_sticky_Q_arg(self) -> Tuple[str, Any]:
         """
         Returns the sticky Q argument
         to be used when the filter is not within the user input.
@@ -206,3 +206,9 @@ class StickyFilter(Filter):
             value,
             lookup,
         )
+
+    def get_options_schema_info(self, field):
+        info = super().get_options_schema_info(field)
+        info['is_sticky'] = True
+        info['sticky_default'] = deconstruct_field_lookup_arg(*self.get_sticky_Q_arg())
+        return info
