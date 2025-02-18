@@ -112,7 +112,7 @@ class Filter:
             "label": self.label
         }
         if hasattr(field, "help_text") and field.help_text:
-            info['description'] = field.help_text
+            info['help_text'] = field.help_text
         return info
 
     def to_cleaned_value(self, value):
