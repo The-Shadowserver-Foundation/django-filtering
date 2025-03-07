@@ -136,7 +136,7 @@ class FilterSet(metaclass=FilterSetType):
     )
 
     def __init__(self, query_data=None):
-        self.query_data = query_data
+        self.query_data = [] if query_data is None else query_data
         # Initialize the rendered query state
         # This represents the data as native Q objects
         self._query = None
@@ -218,10 +218,6 @@ class FilterSet(metaclass=FilterSetType):
         """
         self._errors = []
 
-        # Bail out when the query_data is empty or undefined
-        if not self.query_data:
-            return
-
         # Validates both the schema and the data
         validator = self._make_json_schema_validator(self.json_schema.schema)
         for err in validator.iter_errors(self.query_data):
@@ -281,7 +277,12 @@ class FilterSet(metaclass=FilterSetType):
         or when the default value has been set to anything other than
         the __unstick value__.
         """
-        query_data_filter_names = {key for key, _ in self.query_data[1]}
+        # Define the set of filter names used in the current query data.
+        if len(self.query_data) >= 2:
+            query_data_filter_names = {key for key, _ in self.query_data[1]}
+        else:
+            # Empty set because no query data was provided.
+            query_data_filter_names = set([])
 
         sticky_q = Q()
         for sf in self.sticky_filters:
@@ -295,7 +296,8 @@ class FilterSet(metaclass=FilterSetType):
             # are correctly implemented to exclude the filter from the Q set.
             # Reminder, it is necessary for the sticky filter
             # to be in the query data in order for it to be unstuck.
-        return sticky_q & q
+
+        return sticky_q & q if q else sticky_q
 
 
 def filterset_factory(model, base_cls=FilterSet, filters='__all__'):

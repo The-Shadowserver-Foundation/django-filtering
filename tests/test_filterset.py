@@ -303,6 +303,18 @@ class TestFilterSetTranslatesQueryData:
         )
         assert q == expected
 
+    def test_sticky_filters__without_query_data(self):
+        """
+        Test when a sticky filter is not present in the user provided query data.
+        """
+        data = []
+        filterset = KitchenProductFilterSet(data)
+        assert filterset.is_valid
+        q = filterset._query
+        # Expect the sticky filter to be added to the query
+        expected = Q(("category__exact", "Kitchen"), _connector=Q.AND)
+        assert q == expected
+
     def test_sticky_filters__missing_from_query_data(self):
         """
         Test when a sticky filter is not present in the user provided query data.
@@ -379,6 +391,18 @@ class TestFilterSetTranslatesQueryData:
         q = filterset._query
         # Expect the sticky filter NOT to be present
         expected = Q(("name__icontains", "sink"), _connector=Q.AND)
+        assert q == expected
+
+    def test_several_sticky_filters__without_query_data(self):
+        filterset = TopBrandKitchenProductFilterSet()
+        assert filterset.is_valid
+        q = filterset._query
+        # Expect the sticky filter(s) to be present
+        expected = Q(
+            ('category__exact', 'Kitchen'),
+            ('brand__exact', 'MOEN'),
+            _connector=Q.AND,
+        )
         assert q == expected
 
     def test_several_sticky_filters__missing_from_query_data(self):
