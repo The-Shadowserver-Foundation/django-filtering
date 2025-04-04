@@ -44,17 +44,6 @@ class Metadata:
         self.model = kwargs.get("model", None)
         if self.model is None and not self.is_abstract:
             raise RequiredMetadataError("`model` is required.")
-
-        if kwargs.get("filters", None):
-            warnings.warn(
-                (
-                    "The FilterSet.Meta.filters property has been "
-                    "temporarily disabled. Instead, please subclass FilterSet "
-                    "and assign Filter attributes."
-                ),
-                UserWarning,
-            )
-
         self._filters = kwargs.get('_inherited_filters', []) + kwargs.get('_defined_filters', [])
 
     def get_inheritable_options(self) -> dict:
