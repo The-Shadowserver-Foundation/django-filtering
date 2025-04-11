@@ -46,7 +46,7 @@ def deconstruct_field_lookup_arg(
     """
     name, *lookups = field_lookup.split("__")
     if not lookups:
-        lookups = lookup
+        lookups = lookup if lookup else 'exact'
     elif len(lookups) == 1:
         lookups = lookups[0]
 

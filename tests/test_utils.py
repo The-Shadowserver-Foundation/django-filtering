@@ -28,7 +28,9 @@ def test_construct_field_lookup_arg():
 
 
 def test_deconstruct_field_lookup_arg():
-    expected = ['state', {'value': 'Complete'}]
+    # Note, when a lookup is not provided, it defaults to 'exact'.
+    # Django defaults to 'exact' in the backend. Here we are simply explicit about it.
+    expected = ['state', {'lookup': 'exact', 'value': 'Complete'}]
     assert deconstruct_field_lookup_arg('state', 'Complete') == expected
 
     expected = ['name', {'lookup': 'icontains', 'value': 'foo'}]
