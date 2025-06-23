@@ -174,7 +174,7 @@ class TestFilterQuerySet:
     def test_empty_filter_queryset(self):
         filterset = ParticipantFilterSet()
         # Target
-        qs = filterset.filter_queryset()
+        qs = filterset.filter_queryset(Participant.objects.all())
         # Check result is a non-filtered result of either
         # the queryset argument or the base queryset.
         asserts.assertQuerySetEqual(qs, Participant.objects.all())
@@ -185,7 +185,7 @@ class TestFilterQuerySet:
         filterset = ParticipantFilterSet(query_data)
 
         # Target
-        qs = filterset.filter_queryset()
+        qs = filterset.filter_queryset(Participant.objects.all())
 
         expected_qs = Participant.objects.filter(name__icontains=filter_value).all()
         # Check queryset equality
@@ -595,4 +595,4 @@ class TestFilterSetQueryData:
         filterset = ParticipantFilterSet(data)
 
         with pytest.raises(InvalidFilterSet):
-            filterset.filter_queryset()
+            filterset.filter_queryset(Participant.objects.all())

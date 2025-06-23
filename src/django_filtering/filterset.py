@@ -152,18 +152,14 @@ class FilterSet(metaclass=FilterSetType):
     def sticky_filters(self):
         return self._meta.sticky_filters
 
-    def get_queryset(self):
-        return self._meta.model.objects.all()
-
-    def filter_queryset(self, queryset=None) -> QuerySet:
+    def filter_queryset(self, queryset) -> QuerySet:
         if not self.is_valid:
             raise InvalidFilterSet(
                 "The query is invalid! "
                 "Hint, check `is_valid` before running `filter_queryset`.\n"
                 f"Errors:\n{self._errors}"
             )
-        if queryset is None:
-            queryset = self.get_queryset()
+
         if self.query:
             queryset = queryset.filter(self.query)
         return queryset
