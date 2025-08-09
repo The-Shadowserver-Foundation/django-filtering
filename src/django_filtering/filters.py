@@ -102,7 +102,7 @@ class Filter:
             raise ValueError("At this time, the filter label must be provided.")
         self.label = label
 
-    def get_options_schema_info(self, field):
+    def get_options_schema_info(self, field, queryset):
         lookups = {}
         for lu in self.lookups:
             lookups[lu.name] = lu.get_options_schema_definition(field)
@@ -121,7 +121,7 @@ class Filter:
         """
         return value
 
-    def translate_to_Q_arg(self, value, **kwargs) -> Tuple[str, Any] | None:
+    def translate_to_Q_arg(self, value, queryset, **kwargs) -> Tuple[str, Any] | None:
         """
         Translates the query data criteria to a Q argument.
         """
@@ -184,14 +184,14 @@ class StickyFilter(Filter):
             return UNSTICK_VALUE
         return value
 
-    def get_sticky_Q_arg(self) -> Tuple[str, Any]:
+    def get_sticky_Q_arg(self, queryset) -> Tuple[str, Any]:
         """
         Returns the sticky Q argument
         to be used when the filter is not within the user input.
         """
-        return self.translate_to_Q_arg(value=self.default_value)
+        return self.translate_to_Q_arg(value=self.default_value, queryset=queryset)
 
-    def translate_to_Q_arg(self, value, **kwargs) -> Tuple[str, Any] | None:
+    def translate_to_Q_arg(self, value, queryset, **kwargs) -> Tuple[str, Any] | None:
         """
         Translates the query data criteria to a Q argument.
         """
@@ -207,8 +207,8 @@ class StickyFilter(Filter):
             lookup,
         )
 
-    def get_options_schema_info(self, field):
-        info = super().get_options_schema_info(field)
+    def get_options_schema_info(self, field, queryset):
+        info = super().get_options_schema_info(field, queryset)
         info['is_sticky'] = True
-        info['sticky_default'] = deconstruct_field_lookup_arg(*self.get_sticky_Q_arg())
+        info['sticky_default'] = deconstruct_field_lookup_arg(*self.get_sticky_Q_arg(queryset))
         return info

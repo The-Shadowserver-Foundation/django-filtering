@@ -214,13 +214,13 @@ class TestFilterSetTranslatesQueryData:
             {"lookup": "icontains", "value": "stove"},
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data)
+        q = filterset._make_Q(filterset.query_data, queryset=None)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND)
         assert q == expected
 
         data = ("not", ("name", {"lookup": "icontains", "value": "stove"}))
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data)
+        q = filterset._make_Q(filterset.query_data, queryset=None)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND, _negated=True)
         assert q == expected
 
@@ -241,7 +241,7 @@ class TestFilterSetTranslatesQueryData:
             ),
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data)
+        q = filterset._make_Q(filterset.query_data, queryset=None)
         expected = ~(Q(name__icontains="stove") | Q(name__icontains="oven"))
         assert q == expected
 
@@ -259,7 +259,7 @@ class TestFilterSetTranslatesQueryData:
             ),
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data)
+        q = filterset._make_Q(filterset.query_data, queryset=None)
         expected = Q(name__icontains="stove") | (
             Q(name__icontains="oven") & ~Q(name__icontains="microwave")
         )
@@ -288,7 +288,7 @@ class TestFilterSetTranslatesQueryData:
             ),
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data)
+        q = filterset._make_Q(filterset.query_data, queryset=None)
         expected = (
             Q(category__in=["Kitchen", "Bath"])
             & Q(stocked__year__gte="2024")
@@ -310,7 +310,7 @@ class TestFilterSetTranslatesQueryData:
         data = []
         filterset = KitchenProductFilterSet(data)
         assert filterset.is_valid
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be added to the query
         expected = Q(("category__exact", "Kitchen"), _connector=Q.AND)
         assert q == expected
@@ -327,7 +327,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = KitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be added to the query
         expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
@@ -346,7 +346,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = KitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be present
         expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
@@ -365,7 +365,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = KitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be present
         expected = Q(("category__exact", "Bath")) & Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
@@ -388,7 +388,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = KitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter NOT to be present
         expected = Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
@@ -396,7 +396,7 @@ class TestFilterSetTranslatesQueryData:
     def test_several_sticky_filters__without_query_data(self):
         filterset = TopBrandKitchenProductFilterSet()
         assert filterset.is_valid
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter(s) to be present
         expected = Q(
             ('category__exact', 'Kitchen'),
@@ -414,7 +414,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = TopBrandKitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter(s) to be present
         expected = Q(
             ('category__exact', 'Kitchen'),
@@ -434,7 +434,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = TopBrandKitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filter(s) to be present
         # Note, the order of these might seem wrong,
         # because 'category' was defined before 'brand',
@@ -457,7 +457,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = TopBrandKitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filters to be present
         expected = (
             Q(("category__exact", "Bath"))
@@ -479,7 +479,7 @@ class TestFilterSetTranslatesQueryData:
         ]
         filterset = TopBrandKitchenProductFilterSet(data)
         filterset.validate()
-        q = filterset._query
+        q = filterset.get_query(queryset=None)
         # Expect the sticky filters NOT to be present
         expected = Q(("name__icontains", "faucet"), _connector=Q.AND)
         assert q == expected
@@ -505,7 +505,7 @@ class TestFilterSetQueryData:
         # Target
         assert filterset.is_valid, filterset.errors
         expected = Q(("name__icontains", "har"), _connector=Q.AND)
-        assert filterset.query == expected
+        assert filterset.get_query(queryset=None) == expected
 
     def test_invalid_toplevel_operator(self):
         data = [

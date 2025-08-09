@@ -159,7 +159,7 @@ class TestFilter:
         )
 
         # Check options schema output
-        options_schema_info = filter.get_options_schema_info(field)
+        options_schema_info = filter.get_options_schema_info(field, queryset=None)
         expected = {
             'default_lookup': default_lookup,
             'label': label,
@@ -193,7 +193,7 @@ class TestFilter:
 
         # Check translation of _query data's criteria_ to django Q argument
         criteria = {'lookup': 'gte', 'value': '50'}
-        assert filter.translate_to_Q_arg(**criteria) == ('pages__gte', '50')
+        assert filter.translate_to_Q_arg(**criteria, queryset=None) == ('pages__gte', '50')
 
 
 class TestStickyFilter:
@@ -226,11 +226,11 @@ class TestStickyFilter:
 
         # Check translation of query data's criteria to django Q argument
         criteria = {'lookup': 'exact', 'value': 'bulk'}
-        assert filter.translate_to_Q_arg(**criteria) == ('type__exact', 'bulk')
+        assert filter.translate_to_Q_arg(**criteria, queryset=None) == ('type__exact', 'bulk')
 
         # Ensure value does not translate to a Q argument
         criteria = {'lookup': 'exact', 'value': unstick_value}
-        assert filter.translate_to_Q_arg(**criteria) == None
+        assert filter.translate_to_Q_arg(**criteria, queryset=None) == None
 
         # Check the default Q argument
-        assert filter.get_sticky_Q_arg() == ('type__exact', default_value)
+        assert filter.get_sticky_Q_arg(queryset=None) == ('type__exact', default_value)

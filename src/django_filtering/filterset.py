@@ -126,9 +126,6 @@ class FilterSet(metaclass=FilterSetType):
 
     def __init__(self, query_data=None):
         self.query_data = [] if query_data is None else query_data
-        # Initialize the rendered query state
-        # This represents the data as native Q objects
-        self._query = None
         # Initialize the errors state, to be called by is_valid()
         self._errors = None
         # Create the json-schema for validation
@@ -137,6 +134,9 @@ class FilterSet(metaclass=FilterSetType):
         # Create the filtering options schema
         # to provide the frontend with the available filtering options.
         self.filtering_options_schema = FilteringOptionsSchema(self)
+
+    def get_default_queryset(self):
+        return self._meta.model.objects.all()
 
     @property
     def filters(self):
@@ -152,7 +152,10 @@ class FilterSet(metaclass=FilterSetType):
     def sticky_filters(self):
         return self._meta.sticky_filters
 
-    def filter_queryset(self, queryset) -> QuerySet:
+    def filter_queryset(self, queryset=None) -> QuerySet:
+        if queryset is None:
+            queryset = self.get_default_queryset()
+
         if not self.is_valid:
             raise InvalidFilterSet(
                 "The query is invalid! "
@@ -160,8 +163,9 @@ class FilterSet(metaclass=FilterSetType):
                 f"Errors:\n{self._errors}"
             )
 
-        if self.query:
-            queryset = queryset.filter(self.query)
+        query = self.get_query(queryset)
+        if query:
+            queryset = queryset.filter(query)
         return queryset
 
     @property
@@ -175,11 +179,6 @@ class FilterSet(metaclass=FilterSetType):
     def errors(self):
         """A list of validation errors. This value is populated when there are validation errors."""
         return self._errors
-
-    @property
-    def query(self) -> Q:
-        """Q object derived from query data. Only available after validation."""
-        return self._query
 
     def _make_json_schema_validator(self, schema):
         cls = jsonschema.validators.validator_for(schema)
@@ -213,13 +212,13 @@ class FilterSet(metaclass=FilterSetType):
                 'message': err.message,
             })
 
-        # Translate to Q objects
-        if not self._errors:
-            q = self._make_Q(self.query_data)
-            q = self._apply_sticky_filters(q)
-            self._query = q
+    def get_query(self, queryset) -> Q:
+        """Q object derived from query data. Only available after validation."""
+        q = self._make_Q(self.query_data, queryset)
+        q = self._apply_sticky_filters(q, queryset)
+        return q
 
-    def _make_Q(self, query_data, _is_root=True) -> Q | Tuple[str, Any]:
+    def _make_Q(self, query_data, queryset, _is_root=True) -> Q | Tuple[str, Any]:
         """
         Make a ``Q`` object out of the given query data.
         """
@@ -235,7 +234,7 @@ class FilterSet(metaclass=FilterSetType):
 
         if key.upper() in self.valid_connectors:
             # Recurively build query tree
-            q_children = [self._make_Q(v, _is_root=False) for v in value]
+            q_children = [self._make_Q(v, queryset=queryset, _is_root=False) for v in value]
             # Remove any `None` values, where filters have been conditionally removed.
             q_children = (x for x in q_children if x)
             if not q_children:
@@ -247,13 +246,13 @@ class FilterSet(metaclass=FilterSetType):
             )
         else:
             filter = self._get_filter(key)
-            q_arg = filter.translate_to_Q_arg(**value)
+            q_arg = filter.translate_to_Q_arg(**value, queryset=queryset)
             if _is_root or is_negated:
                 return Q(q_arg, _negated=is_negated)
             else:
                 return q_arg
 
-    def _apply_sticky_filters(self, q):
+    def _apply_sticky_filters(self, q, queryset):
         """
         Apply sticky filters to the query filters.
 
@@ -273,7 +272,7 @@ class FilterSet(metaclass=FilterSetType):
         for sf in self.sticky_filters:
             if sf.name not in query_data_filter_names:
                 # Anding the sticky filter's default Q
-                sticky_q &= Q(sf.get_sticky_Q_arg())
+                sticky_q &= Q(sf.get_sticky_Q_arg(queryset=queryset))
             # Note, at this point in the process,
             # the sticky filter should not be part of the Q set,
             # because the UNSTICK_VALUE has prevented it from being included.
