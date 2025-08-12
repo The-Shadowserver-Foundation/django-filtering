@@ -91,7 +91,7 @@ class Filter:
     """
     name = None
 
-    def __init__(self, *lookups, default_lookup=None, label=None):
+    def __init__(self, *lookups, default_lookup=None, label=None, translator=None):
         self.lookups = lookups
         # Ensure at least one lookup has been defined.
         if len(self.lookups) == 0:
@@ -101,6 +101,7 @@ class Filter:
         if label is None:
             raise ValueError("At this time, the filter label must be provided.")
         self.label = label
+        self._translator = translator or self._default_translator
 
     def get_options_schema_info(self, field, queryset):
         lookups = {}
@@ -121,17 +122,24 @@ class Filter:
         """
         return value
 
-    def translate_to_Q_arg(self, value, queryset, **kwargs) -> Tuple[str, Any] | None:
+    def _default_translator(self, value, queryset, **kwargs) -> tuple[str, Any] | None:
         """
         Translates the query data criteria to a Q argument.
         """
-        lookup = kwargs.get('lookup', self.default_lookup)
-        value = self.to_cleaned_value(value)
+        lookup = kwargs.setdefault('lookup', self.default_lookup)
         return construct_field_lookup_arg(
             self.name,
             value,
             lookup,
         )
+
+    def translate_to_Q_arg(self, value, queryset, **kwargs) -> Tuple[str, Any] | None:
+        """
+        Translates the query data criteria to a Q argument.
+        """
+        value = self.to_cleaned_value(value)
+        kwargs.setdefault('lookup', self.default_lookup)
+        return self._translator(value, queryset, **kwargs)
 
 
 class StickyFilter(Filter):

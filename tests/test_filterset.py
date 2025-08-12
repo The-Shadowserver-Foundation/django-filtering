@@ -7,8 +7,8 @@ from pytest_django import asserts
 from django_filtering import filters
 from django_filtering.filterset import FilterSet, InvalidFilterSet
 
-from tests.lab_app.models import Participant
-from tests.lab_app.filters import ParticipantFilterSet
+from tests.lab_app.models import Participant, Study
+from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
 from tests.market_app.filters import (
     KitchenProductFilterSet,
     ProductFilterSet,
@@ -155,6 +155,26 @@ class TestFilterSetCreation:
                 pass
 
         assert excinfo.match("TestMissingFilterSet errored")
+
+    def test_with_non_existent_field(self):
+        """
+        Expect the creation of the FilterSet even though a filter for a non-existent field was defined.
+        """
+        filterset_cls = StudyFilterSet
+        expected_filters = {
+            "name": ["icontains"],
+            "continent": ["exact"],
+        }
+
+        # Expect resulting classes not to have Meta class attribute
+        assert not hasattr(filterset_cls, 'Meta')
+
+        # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
+        assert [f.name for f in filterset_cls._meta.filters] == list(expected_filters.keys())
+
+        # Check for the expected filters and lookups
+        filterset = filterset_cls()
+        assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == expected_filters
 
 
 @pytest.mark.django_db
@@ -484,6 +504,32 @@ class TestFilterSetTranslatesQueryData:
         expected = Q(("name__icontains", "faucet"), _connector=Q.AND)
         assert q == expected
 
+    def test_custom_translator(self):
+        query_data = (
+            "and",
+            (
+                (
+                    "name",
+                    {"lookup": "icontains", "value": "Fluoride"},
+                ),
+                (
+                    "continent",
+                    {"lookup": "exact", "value": "NA"},
+                ),
+            ),
+        )
+        # The StudyFilterSet.continent filter has a custom translator assigned to it.
+        filterset = StudyFilterSet(query_data)
+        q = filterset._make_Q(filterset.query_data, queryset=None)
+
+        # Incomplete list of ISO 1366-1 alpha-3 country codes for North America
+        expected_country_codes = ['CAN', 'MEX', 'USA', 'BMU', 'GRL']
+        expected = Q(
+            ("name__icontains", "Fluoride"),
+            ("country__in", expected_country_codes),
+            _connector=Q.AND,
+        )
+        assert q == expected
 
 class TestFilterSetQueryData:
     """

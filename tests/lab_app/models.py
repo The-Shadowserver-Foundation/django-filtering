@@ -34,5 +34,6 @@ class Study(models.Model):
         CLOSE = 40, "Closed"
 
     name = models.CharField(max_length=255)
+    country = models.CharField(max_length=3)  # ISO 3166-1 alpha-3
     state = models.IntegerField(choices=State, default=State.DRAFT)
     participants = models.ManyToManyField(Participant, blank=True)
