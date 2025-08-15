@@ -1,5 +1,8 @@
 from typing import Any, Dict, List, Optional, Tuple
 
+from django.db.models import Q
+
+
 # An arugment to the Q class
 QArg = Tuple[str, Any]
 QueryDataVar = List[str | Dict[str, Any]]
@@ -35,21 +38,21 @@ def construct_field_lookup_arg(
     return (construct_field_lookup_name(field_name, lookup=lookup), value)
 
 
-def deconstruct_field_lookup_arg(
-    field_lookup: str,
-    value: Any,
-    lookup: Optional[str | List[str]] = None,
+def deconstruct_query(
+    query: Q,
 ) -> QueryDataVar:
     """
-    Given a field name with lookup value,
+    Given a query (Q),
     deconstruct it into a __query data__ structure.
     """
+    if len(query.children) >= 2:
+        raise ValueError("Can only handle deconstruction of a single query value")
+    field_lookup, value = query.children[0]
     name, *lookups = field_lookup.split("__")
     if not lookups:
-        lookups = lookup if lookup else 'exact'
-    elif len(lookups) == 1:
+        lookups = 'exact'
+    elif isinstance(lookups, list) and len(lookups) == 1:
         lookups = lookups[0]
-
     opts = {'value': value}
     if lookups: opts['lookup'] = lookups
     return [name, opts]

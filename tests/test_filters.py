@@ -170,7 +170,7 @@ class TestFilter:
         }
         assert options_schema_info == expected
 
-    def test_translate_to_Q_arg(self):
+    def test_transmute(self):
         label = "Pages"
         choices = [
             ('10', '10'),
@@ -193,7 +193,7 @@ class TestFilter:
 
         # Check translation of _query data's criteria_ to django Q argument
         criteria = {'lookup': 'gte', 'value': '50'}
-        assert filter.translate_to_Q_arg(**criteria, queryset=None) == ('pages__gte', '50')
+        assert filter.transmute(**criteria, queryset=None) == models.Q(pages__gte='50')
 
 
 class TestStickyFilter:
@@ -226,11 +226,11 @@ class TestStickyFilter:
 
         # Check translation of query data's criteria to django Q argument
         criteria = {'lookup': 'exact', 'value': 'bulk'}
-        assert filter.translate_to_Q_arg(**criteria, queryset=None) == ('type__exact', 'bulk')
+        assert filter.transmute(**criteria, queryset=None) == models.Q(type__exact='bulk')
 
         # Ensure value does not translate to a Q argument
         criteria = {'lookup': 'exact', 'value': unstick_value}
-        assert filter.translate_to_Q_arg(**criteria, queryset=None) == None
+        assert filter.transmute(**criteria, queryset=None) == None
 
         # Check the default Q argument
-        assert filter.get_sticky_Q_arg(queryset=None) == ('type__exact', default_value)
+        assert filter.get_sticky_Q(queryset=None) == models.Q(type__exact=default_value)
