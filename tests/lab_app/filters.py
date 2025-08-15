@@ -29,7 +29,7 @@ class StudyFilterSet(filtering.FilterSet):
         ),
         default_lookup='exact',
         label="Continent",
-        translator=utils.continent_to_countries,
+        transmuter=utils.continent_to_countries,
     )
 
     class Meta:

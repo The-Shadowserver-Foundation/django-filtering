@@ -234,13 +234,13 @@ class TestFilterSetTranslatesQueryData:
             {"lookup": "icontains", "value": "stove"},
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data, queryset=None)
+        q = filterset._transmute(filterset.query_data, queryset=None)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND)
         assert q == expected
 
         data = ("not", ("name", {"lookup": "icontains", "value": "stove"}))
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data, queryset=None)
+        q = filterset._transmute(filterset.query_data, queryset=None)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND, _negated=True)
         assert q == expected
 
@@ -261,7 +261,7 @@ class TestFilterSetTranslatesQueryData:
             ),
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data, queryset=None)
+        q = filterset._transmute(filterset.query_data, queryset=None)
         expected = ~(Q(name__icontains="stove") | Q(name__icontains="oven"))
         assert q == expected
 
@@ -279,7 +279,7 @@ class TestFilterSetTranslatesQueryData:
             ),
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data, queryset=None)
+        q = filterset._transmute(filterset.query_data, queryset=None)
         expected = Q(name__icontains="stove") | (
             Q(name__icontains="oven") & ~Q(name__icontains="microwave")
         )
@@ -308,7 +308,7 @@ class TestFilterSetTranslatesQueryData:
             ),
         )
         filterset = ProductFilterSet(data)
-        q = filterset._make_Q(filterset.query_data, queryset=None)
+        q = filterset._transmute(filterset.query_data, queryset=None)
         expected = (
             Q(category__in=["Kitchen", "Bath"])
             & Q(stocked__year__gte="2024")
@@ -520,7 +520,7 @@ class TestFilterSetTranslatesQueryData:
         )
         # The StudyFilterSet.continent filter has a custom translator assigned to it.
         filterset = StudyFilterSet(query_data)
-        q = filterset._make_Q(filterset.query_data, queryset=None)
+        q = filterset._transmute(filterset.query_data, queryset=None)
 
         # Incomplete list of ISO 1366-1 alpha-3 country codes for North America
         expected_country_codes = ['CAN', 'MEX', 'USA', 'BMU', 'GRL']

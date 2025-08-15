@@ -1,6 +1,8 @@
+from django.db.models import Q
+
 from django_filtering.utils import (
     construct_field_lookup_arg,
-    deconstruct_field_lookup_arg,
+    deconstruct_query,
     merge_dicts,
 )
 
@@ -31,7 +33,7 @@ def test_deconstruct_field_lookup_arg():
     # Note, when a lookup is not provided, it defaults to 'exact'.
     # Django defaults to 'exact' in the backend. Here we are simply explicit about it.
     expected = ['state', {'lookup': 'exact', 'value': 'Complete'}]
-    assert deconstruct_field_lookup_arg('state', 'Complete') == expected
+    assert deconstruct_query(Q(state='Complete')) == expected
 
     expected = ['name', {'lookup': 'icontains', 'value': 'foo'}]
-    assert deconstruct_field_lookup_arg('name', 'foo', 'icontains') == expected
+    assert deconstruct_query(Q(name__icontains='foo')) == expected

@@ -214,13 +214,13 @@ class FilterSet(metaclass=FilterSetType):
 
     def get_query(self, queryset) -> Q:
         """Q object derived from query data. Only available after validation."""
-        q = self._make_Q(self.query_data, queryset)
+        q = self._transmute(self.query_data, queryset)
         q = self._apply_sticky_filters(q, queryset)
         return q
 
-    def _make_Q(self, query_data, queryset, _is_root=True) -> Q | Tuple[str, Any]:
+    def _transmute(self, query_data, queryset, _is_root=True) -> Q | None:
         """
-        Make a ``Q`` object out of the given query data.
+        Chane the given query data to a ``Q`` object.
         """
         if not query_data:
             return None
@@ -233,24 +233,22 @@ class FilterSet(metaclass=FilterSetType):
             key, value = value
 
         if key.upper() in self.valid_connectors:
+            connector = key.upper()
+            q = Q.create(connector=connector)
             # Recurively build query tree
-            q_children = [self._make_Q(v, queryset=queryset, _is_root=False) for v in value]
-            # Remove any `None` values, where filters have been conditionally removed.
-            q_children = (x for x in q_children if x)
-            if not q_children:
-                return Q(_connector=key.upper(), _negated=is_negated)
-            return Q(
-                *q_children,
-                _connector=key.upper(),
-                _negated=is_negated,
-            )
+            for v in value:
+                q_child = self._transmute(v, queryset=queryset, _is_root=False)
+                if not q_child: continue
+                q = q._combine(q_child, connector)
+            q.negated = is_negated
+            return q
         else:
             filter = self._get_filter(key)
-            q_arg = filter.translate_to_Q_arg(**value, queryset=queryset)
+            q = filter.transmute(**value, queryset=queryset)
             if _is_root or is_negated:
-                return Q(q_arg, _negated=is_negated)
+                return Q.create(q.children, negated=is_negated)
             else:
-                return q_arg
+                return q
 
     def _apply_sticky_filters(self, q, queryset):
         """
@@ -272,7 +270,7 @@ class FilterSet(metaclass=FilterSetType):
         for sf in self.sticky_filters:
             if sf.name not in query_data_filter_names:
                 # Anding the sticky filter's default Q
-                sticky_q &= Q(sf.get_sticky_Q_arg(queryset=queryset))
+                sticky_q &= sf.get_sticky_Q(queryset=queryset)
             # Note, at this point in the process,
             # the sticky filter should not be part of the Q set,
             # because the UNSTICK_VALUE has prevented it from being included.

@@ -1,6 +1,8 @@
 from typing import Any, Tuple
 
-from .utils import construct_field_lookup_arg, deconstruct_field_lookup_arg
+from django.db.models import Q
+
+from .utils import construct_field_lookup_arg, deconstruct_query
 
 
 __all__ = (
@@ -91,7 +93,7 @@ class Filter:
     """
     name = None
 
-    def __init__(self, *lookups, default_lookup=None, label=None, translator=None):
+    def __init__(self, *lookups, default_lookup=None, label=None, transmuter=None):
         self.lookups = lookups
         # Ensure at least one lookup has been defined.
         if len(self.lookups) == 0:
@@ -101,7 +103,7 @@ class Filter:
         if label is None:
             raise ValueError("At this time, the filter label must be provided.")
         self.label = label
-        self._translator = translator or self._default_translator
+        self._transmuter = transmuter or self._default_transmuter
 
     def get_options_schema_info(self, field, queryset):
         lookups = {}
@@ -116,30 +118,30 @@ class Filter:
             info['help_text'] = field.help_text
         return info
 
-    def to_cleaned_value(self, value):
+    def clean(self, value):
         """
         Clean the value for database usage.
         """
         return value
 
-    def _default_translator(self, value, queryset, **kwargs) -> tuple[str, Any] | None:
+    def _default_transmuter(self, value, queryset, **kwargs) -> Q | None:
         """
-        Translates the query data criteria to a Q argument.
+        Produces a ``Q`` object from the query data criteria using the known information.
         """
         lookup = kwargs.setdefault('lookup', self.default_lookup)
-        return construct_field_lookup_arg(
+        return Q(construct_field_lookup_arg(
             self.name,
             value,
             lookup,
-        )
+        ))
 
-    def translate_to_Q_arg(self, value, queryset, **kwargs) -> Tuple[str, Any] | None:
+    def transmute(self, value, queryset, **kwargs) -> Q | None:
         """
-        Translates the query data criteria to a Q argument.
+        Produces a ``Q`` object from the query data criteria.
         """
-        value = self.to_cleaned_value(value)
+        value = self.clean(value)
         kwargs.setdefault('lookup', self.default_lookup)
-        return self._translator(value, queryset, **kwargs)
+        return self._transmuter(value, queryset, **kwargs)
 
 
 class StickyFilter(Filter):
@@ -187,21 +189,20 @@ class StickyFilter(Filter):
         self.unstick_value = unstick_value
 
     def to_cleaned_value(self, value):
-        value = super().to_cleaned_value(value)
+        value = super().clean(value)
         if value == self.unstick_value:
             return UNSTICK_VALUE
         return value
 
-    def get_sticky_Q_arg(self, queryset) -> Tuple[str, Any]:
+    def get_sticky_Q(self, queryset) -> Q:
         """
-        Returns the sticky Q argument
-        to be used when the filter is not within the user input.
+        Returns a ``Q`` object to be used when the filter is not within the user input.
         """
-        return self.translate_to_Q_arg(value=self.default_value, queryset=queryset)
+        return self.transmute(value=self.default_value, queryset=queryset)
 
-    def translate_to_Q_arg(self, value, queryset, **kwargs) -> Tuple[str, Any] | None:
+    def transmute(self, value, queryset, **kwargs) -> Q | None:
         """
-        Translates the query data criteria to a Q argument.
+        Produces a ``Q`` object from the query data criteria.
         """
         lookup = kwargs.get('lookup', self.default_lookup)
 
@@ -209,14 +210,14 @@ class StickyFilter(Filter):
         if value is UNSTICK_VALUE:
             return None
 
-        return construct_field_lookup_arg(
+        return Q(construct_field_lookup_arg(
             self.name,
             value,
             lookup,
-        )
+        ))
 
     def get_options_schema_info(self, field, queryset):
         info = super().get_options_schema_info(field, queryset)
         info['is_sticky'] = True
-        info['sticky_default'] = deconstruct_field_lookup_arg(*self.get_sticky_Q_arg(queryset))
+        info['sticky_default'] = deconstruct_query(self.get_sticky_Q(queryset))
         return info
