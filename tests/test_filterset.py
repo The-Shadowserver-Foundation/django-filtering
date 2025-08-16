@@ -398,11 +398,11 @@ class TestFilterSetTranslatesQueryData:
         This test case essentially tests for the removal
         of the sticky filter from the overall query.
         """
-        unstick_user_value = KitchenProductFilterSet._meta.sticky_filters[0].unstick_value
+        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters[0].solvent_value
         data = [
             "and",
             [
-                ["category", {"lookup": "exact", "value": unstick_user_value}],
+                ["category", {"lookup": "exact", "value": solvent_user_value}],
                 ["name", {"lookup": "icontains", "value": "sink"}],
             ],
         ]
@@ -487,13 +487,13 @@ class TestFilterSetTranslatesQueryData:
         assert q == expected
 
     def test_several_sticky_filters__unstick_value_in_query_data(self):
-        category_unstick_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('category').unstick_value
-        brand_unstick_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('brand').unstick_value
+        category_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('category').solvent_value
+        brand_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('brand').solvent_value
         data = [
             "and",
             [
-                ["brand", {"lookup": "exact", "value": brand_unstick_user_value}],
-                ["category", {"lookup": "exact", "value": category_unstick_user_value}],
+                ["brand", {"lookup": "exact", "value": brand_solvent_user_value}],
+                ["category", {"lookup": "exact", "value": category_solvent_user_value}],
                 ["name", {"lookup": "icontains", "value": "faucet"}],
             ],
         ]

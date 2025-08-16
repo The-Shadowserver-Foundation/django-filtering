@@ -210,15 +210,15 @@ class TestStickyFilter:
             ('manual', 'Manual'),
             ('bulk', 'Bulk'),
         ]
-        unstick_value = 'any'
-        default_value = 'manual'
+        solvent_value = 'any'
+        sticky_value = 'manual'
 
         # Create the filter
-        filter = filters.StickyFilter(
+        filter = filters.Filter(
             filters.ChoiceLookup('exact', label='is', choices=choices),
             label=label,
-            unstick_value=unstick_value,
-            default_value=default_value,
+            solvent_value=solvent_value,
+            sticky_value=sticky_value,
         )
         # Manually set the Filter's name attribute,
         # which is otherwise handled by the FilterSet metaclass.
@@ -229,8 +229,8 @@ class TestStickyFilter:
         assert filter.transmute(**criteria, queryset=None) == models.Q(type__exact='bulk')
 
         # Ensure value does not translate to a Q argument
-        criteria = {'lookup': 'exact', 'value': unstick_value}
+        criteria = {'lookup': 'exact', 'value': solvent_value}
         assert filter.transmute(**criteria, queryset=None) == None
 
         # Check the default Q argument
-        assert filter.get_sticky_Q(queryset=None) == models.Q(type__exact=default_value)
+        assert filter.get_sticky_Q(queryset=None) == models.Q(type__exact=sticky_value)
