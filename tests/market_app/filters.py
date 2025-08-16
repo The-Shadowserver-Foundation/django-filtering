@@ -30,10 +30,10 @@ class KitchenProductFilterSet(filtering.FilterSet):
         filtering.InputLookup('icontains', label="contains"),
         label="Name",
     )
-    category = filtering.StickyFilter(
+    category = filtering.Filter(
         filtering.ChoiceLookup('exact', label="equals"),
-        unstick_value='',
-        default_value="Kitchen",
+        solvent_value='',
+        sticky_value="Kitchen",
         label="Category",
     )
     class Meta:
@@ -47,9 +47,9 @@ class TopBrandKitchenProductFilterSet(KitchenProductFilterSet):
         ('MOEN', 'MOEN'),
         ('Glacier Bay', 'Glacier Bay'),
     ]
-    brand = filtering.StickyFilter(
+    brand = filtering.Filter(
         filtering.ChoiceLookup('exact', label='is', choices=BRAND_CHOICES),
-        default_value="MOEN",
-        unstick_value='all',
+        sticky_value="MOEN",
+        solvent_value='all',
         label="Brand",
     )

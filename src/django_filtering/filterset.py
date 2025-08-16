@@ -5,7 +5,7 @@ import jsonschema
 from django.conf import settings
 from django.db.models import Q, QuerySet
 
-from .filters import Filter, StickyFilter
+from .filters import Filter
 from .schema import JSONSchema, FilteringOptionsSchema
 from .utils import merge_dicts
 
@@ -64,7 +64,7 @@ class Metadata:
 
     @property
     def sticky_filters(self) -> List[Filter]:
-        return [f for f in self.filters if isinstance(f, StickyFilter)]
+        return [f for f in self.filters if f.is_sticky]
 
 
 class FilterSetType(type):
