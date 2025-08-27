@@ -1,4 +1,5 @@
 import warnings
+from functools import cached_property
 from typing import Any, List, Tuple
 
 import jsonschema
@@ -34,37 +35,39 @@ class Metadata:
         'filters',
     )
     PRIVATE_KEYWORD_ARGS = (
-        '_inherited_filters',
-        '_defined_filters',
+        '_parents',
+        '_declared_filters',
     )
     KEYWORD_ARGS = PUBLIC_KEYWORD_ARGS + PRIVATE_KEYWORD_ARGS
 
     def __init__(self, **kwargs):
+        self.parents = kwargs['_parents']
         self.is_abstract = kwargs.get('abstract', False)
         self.model = kwargs.get("model", None)
         if self.model is None and not self.is_abstract:
-            raise RequiredMetadataError("`model` is required.")
-        self._filters = kwargs.get('_inherited_filters', []) + kwargs.get('_defined_filters', [])
+            if len(self.parents) >= 1 and self.parents[0]._meta.model is not None:
+                self.model = self.parents[0]._meta.model
+            else:
+                raise RequiredMetadataError("`model` is required.")
+        self.declared_filters = kwargs.get('_declared_filters', {})
+        # TODO: Create filters from `filters` meta option
+        self._filters = self.declared_filters
 
-    def get_inheritable_options(self) -> dict:
-        """
-        Provides options that can be inherited by a subclass.
-        """
-        return {
-            'model': self.model,
-            '_inherited_filters': self._filters,
-        }
-
-    @property
-    def filters(self) -> List[Filter]:
-        return self._filters
+    @cached_property
+    def filters(self) -> dict[str, Filter]:
+        filters = self._filters.copy()
+        for parent in reversed(self.parents):
+            for name, filter in parent._meta.filters.items():
+                if name not in filters:
+                    filters[name] = filter
+        return filters
 
     def get_filter(self, name: str) -> Filter:
-        return {f.name: f for f in self.filters}[name]
+        return self.filters[name]
 
     @property
-    def sticky_filters(self) -> List[Filter]:
-        return [f for f in self.filters if f.is_sticky]
+    def sticky_filters(self) -> dict[str, Filter]:
+        return {k: v for k, v in self.filters.items() if v.is_sticky}
 
 
 class FilterSetType(type):
@@ -79,26 +82,18 @@ class FilterSetType(type):
         if not bases:
             # Treat base FilterSet as abstract
             meta_opts['abstract'] = True
+        meta_opts['_parents'] =  [b for b in bases if isinstance(b, FilterSetType)]
 
         # Pull out filters from the class definition
-        filters = []
-        cls_attrs = {}
-        for a, v in attrs.items():
-            if not isinstance(v, Filter):
-                cls_attrs[a] = v
-                continue
-            v.name = a
-            filters.append(v)
-        # Prepare definitions in meta options
-        meta_opts['_defined_filters'] = filters
+        meta_opts['_declared_filters'] = {
+            key: attrs.pop(key)
+            for key, value in list(attrs.items())
+            if isinstance(value, Filter)
+        }
 
         # Declare meta class options for runtime usage
-        opts = merge_dicts(*[
-            cls._meta.get_inheritable_options()
-            for cls in bases if isinstance(cls, FilterSetType)
-        ], meta_opts)
         try:
-            cls_attrs['_meta'] = Metadata(**opts)
+            attrs['_meta'] = Metadata(**meta_opts)
         except MetadataException as exc:
             if isinstance(exc, RequiredMetadataError):
                 raise ValueError(
@@ -107,7 +102,7 @@ class FilterSetType(type):
                 )
 
         # Create the new class
-        return super().__new__(mcs, name, bases, cls_attrs)
+        return super().__new__(mcs, name, bases, attrs)
 
 
 class InvalidQueryData(Exception):
@@ -134,23 +129,28 @@ class FilterSet(metaclass=FilterSetType):
         # Create the filtering options schema
         # to provide the frontend with the available filtering options.
         self.filtering_options_schema = FilteringOptionsSchema(self)
+        # Bind the filters to this FilterSet
+        self._filters = [
+            filter.bind(name, self)
+            for name, filter in self._meta.filters.items()
+        ]
 
     def get_default_queryset(self):
         return self._meta.model.objects.all()
 
     @property
-    def filters(self):
-        return self._meta.filters
+    def filters(self) -> list[Filter]:
+        return self._filters
 
     def _get_filter(self, name: str) -> Filter:
         """
         Get the filter object by name
         """
-        return self._meta.get_filter(name)
+        return {f.name: f for f in self._filters}[name]
 
     @property
-    def sticky_filters(self):
-        return self._meta.sticky_filters
+    def sticky_filters(self) -> list[Filter]:
+        return [f for f in self._filters if f.is_sticky]
 
     def filter_queryset(self, queryset=None) -> QuerySet:
         if queryset is None:

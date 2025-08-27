@@ -16,6 +16,16 @@ from tests.market_app.filters import (
 )
 
 
+def get_filter_lookup_mapping(filterset: FilterSet) -> dict[str, list[str]]:
+    """
+    Returns a mapping of filter names to lookup names.
+    """
+    return {
+        filter.name: [lookup.name for lookup in filter.lookups]
+        for filter in filterset.filters
+    }
+
+
 class TestFilterSetCreation:
     """
     Testing the FilterSet meta class creation.
@@ -98,7 +108,7 @@ class TestFilterSetCreation:
                 model = Participant
 
         filterset = TestFilterSet()
-        assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == valid_filters
+        assert get_filter_lookup_mapping(filterset) == valid_filters
 
 
     def test_subclassing_carries_defintions(self):
@@ -139,11 +149,11 @@ class TestFilterSetCreation:
         assert not hasattr(ParticipantFilterSet, 'Meta')
 
         # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
-        assert [f.name for f in ParticipantFilterSet._meta.filters] == ['name', 'age']
+        assert [name for name in ParticipantFilterSet._meta.filters] == ['age', 'name']
 
         # Check for the expected filters and lookups
         filterset = ParticipantFilterSet()
-        assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == expected_filters
+        assert get_filter_lookup_mapping(filterset) == expected_filters
 
     def test_metadata_exception_details(self):
         """
@@ -170,11 +180,11 @@ class TestFilterSetCreation:
         assert not hasattr(filterset_cls, 'Meta')
 
         # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
-        assert [f.name for f in filterset_cls._meta.filters] == list(expected_filters.keys())
+        assert [name for name in filterset_cls._meta.filters] == list(expected_filters.keys())
 
         # Check for the expected filters and lookups
         filterset = filterset_cls()
-        assert {f.name: [l.name for l in f.lookups] for f in filterset.filters} == expected_filters
+        assert get_filter_lookup_mapping(filterset) == expected_filters
 
 
 @pytest.mark.django_db
@@ -398,7 +408,7 @@ class TestFilterSetTranslatesQueryData:
         This test case essentially tests for the removal
         of the sticky filter from the overall query.
         """
-        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters[0].solvent_value
+        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters['category'].solvent_value
         data = [
             "and",
             [
@@ -419,8 +429,8 @@ class TestFilterSetTranslatesQueryData:
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter(s) to be present
         expected = Q(
-            ('category__exact', 'Kitchen'),
             ('brand__exact', 'MOEN'),
+            ('category__exact', 'Kitchen'),
             _connector=Q.AND,
         )
         assert q == expected
@@ -437,8 +447,8 @@ class TestFilterSetTranslatesQueryData:
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter(s) to be present
         expected = Q(
-            ('category__exact', 'Kitchen'),
             ('brand__exact', 'MOEN'),
+            ('category__exact', 'Kitchen'),
             ("name__icontains", "faucet"),
             _connector=Q.AND,
         )
