@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from copy import deepcopy
 
 from django.db.models import Q
 
@@ -91,6 +91,7 @@ class Filter:
     The ``name`` attribute is assigned by the FilterSet's metaclass.
     """
     name = None
+    filterset = None
 
     def __init__(
         self,
@@ -115,6 +116,16 @@ class Filter:
         # and solvent value that removes the sticky value from the resulting query.
         self.sticky_value = sticky_value
         self.solvent_value = solvent_value
+
+    def bind(self, name: str, filterset: 'FilterSet') -> 'Filter':
+        """
+        Returns a copy of this filter,
+        with assignments from the given ``name`` and ``filterset`` instance.
+        """
+        filter = deepcopy(self)
+        filter.name = name
+        filter.filterset = filterset
+        return filter
 
     @property
     def is_sticky(self):
