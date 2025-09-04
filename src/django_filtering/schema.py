@@ -17,7 +17,6 @@ class FilteringOptionsSchema:
         }
         filters = {
             f.name: f.get_options_schema_info(
-                self._get_field(f.name),
                 self.filterset.get_default_queryset(),
             )
             for f in self.filterset.filters

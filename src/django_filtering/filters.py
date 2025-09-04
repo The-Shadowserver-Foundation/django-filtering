@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Q
 
 from .utils import construct_field_lookup_arg, deconstruct_query
@@ -29,7 +30,7 @@ class BaseLookup:
             raise ValueError("At this time, the lookup label must be provided.")
         self.label = label
 
-    def get_options_schema_definition(self, field):
+    def get_options_schema_definition(self, field=None):
         """Returns a dict for use by the options schema."""
         return {
             "type": self.type,
@@ -59,13 +60,20 @@ class ChoiceLookup(BaseLookup):
         super().__init__(*args, **kwargs)
         self._choices = choices
 
-    def get_options_schema_definition(self, field):
+    def get_options_schema_definition(self, field=None):
         definition = super().get_options_schema_definition(field)
         choices = None
 
         # Use the field's choices or the developer defined choices
         if self._choices is None:
-            choices = list(field.get_choices(include_blank=False))
+            if field is None:
+                raise RuntimeError(
+                    f"No choices were defined for '{self.name}' "
+                    "and we could not discover choices "
+                    f"because '{self.name}' is not a field on the model."
+                )
+            else:
+                choices = list(field.get_choices(include_blank=False))
         else:
             if callable(self._choices):
                 choices = self._choices(lookup=self, field=field)
@@ -125,6 +133,7 @@ class Filter:
         filter = deepcopy(self)
         filter.name = name
         filter.filterset = filterset
+        filter.model = filterset._meta.model
         return filter
 
     @property
@@ -139,8 +148,13 @@ class Filter:
             return self.transmute(value=self.sticky_value, queryset=queryset)
         return None
 
-    def get_options_schema_info(self, field, queryset):
+    def get_options_schema_info(self, queryset):
         lookups = {}
+        try:
+            field = self.model._meta.get_field(self.name)
+        except FieldDoesNotExist:
+            field = None
+
         for lu in self.lookups:
             lookups[lu.name] = lu.get_options_schema_definition(field)
         info = {

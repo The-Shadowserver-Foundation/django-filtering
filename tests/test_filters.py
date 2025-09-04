@@ -1,4 +1,7 @@
+from unittest import mock
+
 import pytest
+from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 
 from django_filtering import filters
@@ -142,8 +145,9 @@ class TestFilter:
         assert filter.default_lookup == 'iexact'
 
     def test_get_options_schema_info(self):
+        filter_field_name = 'page_count'
+        field = models.IntegerField()
         label = "Pages"
-        field = models.IntegerField(name='pages')
         lookups_data = (
             [filters.InputLookup, ('gte',), {'label': '>='}],
             [filters.InputLookup, ('lte',), {'label': '<='}],
@@ -158,14 +162,59 @@ class TestFilter:
             label=label,
         )
 
+        # Mock the bound (i.e. `Filter.bind`) instance of the filter.
+        filterset = mock.MagicMock()
+        filterset._meta.model._meta.get_field.return_value = field
+        filter = filter.bind(filter_field_name, filterset)
+
         # Check options schema output
-        options_schema_info = filter.get_options_schema_info(field, queryset=None)
+        options_schema_info = filter.get_options_schema_info(queryset=None)
         expected = {
             'default_lookup': default_lookup,
             'label': label,
             'lookups': {
                 a[0]: {'label': kw['label'], 'type': cls.type}
                 for cls, a, kw in lookups_data
+            },
+        }
+        assert options_schema_info == expected
+
+    def test_get_options_schema_info__for_non_field_filter(self):
+        filter_name = 'is_published'
+        label = "Is published"
+        default_lookup = 'exact'
+        lookups_data = (
+            [
+                filters.ChoiceLookup,
+                (default_lookup,),
+                {'label': ':', 'choices': [('no', 'No'), ('yes', 'Yes')]},
+            ],
+        )
+
+
+        # Target
+        filter = filters.Filter(
+            *[cls(*a, **kw) for cls, a, kw in lookups_data],
+            default_lookup=default_lookup,
+            label=label,
+        )
+
+        # Mock the bound (i.e. `Filter.bind`) instance of the filter.
+        filterset = mock.MagicMock()
+        filterset._meta.model._meta.get_field.side_effect = FieldDoesNotExist()
+        filter = filter.bind(filter_name, filterset)
+
+        # Check options schema output
+        options_schema_info = filter.get_options_schema_info(queryset=None)
+        expected = {
+            'default_lookup': default_lookup,
+            'label': label,
+            'lookups': {
+                default_lookup: {
+                    'label': lookups_data[0][2]['label'],
+                    'type': 'choice',
+                    'choices': lookups_data[0][2]['choices'],
+                }
             },
         }
         assert options_schema_info == expected
