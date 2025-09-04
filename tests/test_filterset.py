@@ -229,9 +229,9 @@ class TestFilterQuerySet:
         assert list(qs) == [self.participants[-1]]
 
 
-class TestFilterSetTranslatesQueryData:
+class TestFilterSetTransmutesQueryData:
     """
-    Test the ``FilterSet._make_Q`` method translates the query data to a ``Q`` object.
+    Test the ``FilterSet._make_Q`` method transmutes the query data to a ``Q`` object.
     """
 
     def test(self):
