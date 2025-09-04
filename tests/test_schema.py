@@ -9,7 +9,8 @@ from django_filtering.filterset import FilterSet
 from django_filtering.schema import FilteringOptionsSchema, JSONSchema
 
 from tests.lab_app import models
-from tests.lab_app.filters import ParticipantFilterSet
+from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
+from tests.lab_app.utils import CONTINENT_CHOICES
 from tests.market_app.filters import TopBrandKitchenProductFilterSet
 
 
@@ -269,3 +270,34 @@ class TestFilteringOptionsSchema:
         # Check for filters
         for name, info in expected_schema.items():
             assert schema.schema['filters'][name] == info
+
+    def test_generation_of_schema_with_non_field_filters(self):
+        expected_filters = {
+            'continent': {
+                'default_lookup': 'exact',
+                'label': 'Continent',
+                'lookups': {
+                    'exact': {
+                        'choices': CONTINENT_CHOICES,
+                        'label': 'is',
+                        'type': 'choice',
+                    },
+                },
+            },
+            'name': {
+                'default_lookup': 'icontains',
+                'label': 'Name',
+                'lookups': {'icontains': {'label': 'contains', 'type': 'input'},
+                },
+            },
+        }
+
+        filterset = StudyFilterSet()
+        schema = FilteringOptionsSchema(filterset)
+
+        # Check for the valid FilterSet
+        assert sorted(schema.schema['filters'].keys()) == sorted(expected_filters.keys())
+
+        # Check for filters
+        assert schema.schema['filters']['name'] == expected_filters['name']
+        assert schema.schema['filters']['continent'] == expected_filters['continent']
