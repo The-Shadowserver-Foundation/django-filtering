@@ -299,7 +299,7 @@ class TestFilterSetTranslatesQueryData:
             "and",
             (
                 ("category", {"lookup": "in", "value": ["Kitchen", "Bath"]}),
-                ("stocked", {"lookup": ["year", "gte"], "value": "2024"}),
+                ("stocked_on", {"lookup": ["year", "gte"], "value": "2024"}),
                 (
                     "or",
                     (
@@ -321,7 +321,7 @@ class TestFilterSetTranslatesQueryData:
         q = filterset._transmute(filterset.query_data, queryset=None)
         expected = (
             Q(category__in=["Kitchen", "Bath"])
-            & Q(stocked__year__gte="2024")
+            & Q(stocked_on__year__gte="2024")
             & (
                 (
                     Q(name__icontains="soap")
