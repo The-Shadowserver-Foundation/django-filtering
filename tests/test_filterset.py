@@ -234,7 +234,7 @@ class TestFilterSetTransmutesQueryData:
     Test the ``FilterSet._make_Q`` method transmutes the query data to a ``Q`` object.
     """
 
-    def test(self):
+    def test_simplest_case(self):
         # Simple test case that isn't actually valid query data,
         # because the value of the root array must be a boolean operation
         # (e.g. and, or, not).
@@ -248,12 +248,14 @@ class TestFilterSetTransmutesQueryData:
         expected = Q(("name__icontains", "stove"), _connector=Q.AND)
         assert q == expected
 
+    def test_notting(self):
         data = ("not", ("name", {"lookup": "icontains", "value": "stove"}))
         filterset = ProductFilterSet(data)
         q = filterset._transmute(filterset.query_data, queryset=None)
         expected = Q(("name__icontains", "stove"), _connector=Q.AND, _negated=True)
         assert q == expected
 
+    def test_notted_oring(self):
         data = (
             "not",
             (
@@ -275,6 +277,7 @@ class TestFilterSetTransmutesQueryData:
         expected = ~(Q(name__icontains="stove") | Q(name__icontains="oven"))
         assert q == expected
 
+    def test_grouped_conditions(self):
         data = (
             "or",
             (
@@ -295,6 +298,7 @@ class TestFilterSetTransmutesQueryData:
         )
         assert q == expected
 
+    def test_deep_grouped_conditions(self):
         data = (
             "and",
             (
