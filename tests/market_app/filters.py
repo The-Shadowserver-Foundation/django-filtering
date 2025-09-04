@@ -12,7 +12,7 @@ class ProductFilterSet(filtering.FilterSet):
         filtering.ChoiceLookup('in', label="in"),
         label="Category",
     )
-    stocked = filtering.Filter(
+    stocked_on = filtering.Filter(
         filtering.InputLookup(['year', 'gte'], label="year >="),
         label="Stocked",
     )
