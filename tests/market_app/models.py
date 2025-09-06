@@ -11,6 +11,7 @@ class Product(models.Model):
     name = models.CharField(max_length=255)
     category = models.CharField(max_length=255, choices=Category)
     stocked_on = models.DateTimeField()
+    quantity = models.IntegerField()
     brand = models.CharField(max_length=255)
 
     def __str__(self):

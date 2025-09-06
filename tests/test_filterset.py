@@ -656,3 +656,22 @@ class TestFilterSetQueryData:
 
         with pytest.raises(InvalidFilterSet):
             filterset.filter_queryset(Participant.objects.all())
+
+    def test_with_boolean_query_data_values(self):
+        """
+        Tests the usage of boolean values in the query data.
+        """
+        data = [
+            "and",
+            [
+                ["is_in_stock", {"lookup": "exact", "value": True}],
+            ],
+        ]
+        filterset = ProductFilterSet(data)
+        q = filterset._transmute(filterset.query_data, queryset=None)
+
+        assert filterset.is_valid, filterset.errors
+        expected = (
+            Q(quantity__gt=0)
+        )
+        assert q == expected

@@ -244,6 +244,23 @@ class TestFilter:
         criteria = {'lookup': 'gte', 'value': '50'}
         assert filter.transmute(**criteria, queryset=None) == models.Q(pages__gte='50')
 
+    def test_valid_json_types(self):
+        # TODO Expand this test to cover native json types: number, null, array, and object.
+
+        def assertion_transmuter(value, queryset, **kwargs):
+            from django.db.models import Q
+
+            assert isinstance(value, bool)
+            return Q(something__in=['a', 'b', 'c'])
+
+        filter = filters.Filter(
+            filters.ChoiceLookup('exact', label=":", choices=((True, 'Yes'), (False, 'No'))),
+            label='Has something?',
+            transmuter=assertion_transmuter,
+        )
+        criteria = {'lookup': 'exact', 'value': True}
+        assert filter.transmute(**criteria, queryset=None)
+
 
 class TestStickyFilter:
 
