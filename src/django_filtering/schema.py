@@ -85,7 +85,8 @@ class JSONSchema:
                         "type": "object",
                         "properties": {
                             "lookup": {"enum": [l.name for l in filter.lookups]},
-                            "value": {"type": "string"},
+                            # TODO Restrict value types to desired input type.
+                            "value": {"type": ["string", "number", "object", "array", "boolean", "null"]},
                         },
                     },
                 ],

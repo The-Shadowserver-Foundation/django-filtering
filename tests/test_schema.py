@@ -58,6 +58,7 @@ class TestJsonSchema:
         assert schema['$defs']['filters']['anyOf'] == expected
 
         # Look for the particular filters
+        valid_value_types = ["string", "number", "object", "array", "boolean", "null"]
         expected_age_filter = {
             'type': 'array',
             'prefixItems': [
@@ -66,7 +67,7 @@ class TestJsonSchema:
                     'type': 'object',
                     'properties': {
                         'lookup': {'enum': valid_filters['age']},
-                        'value': {'type': 'string'}
+                        'value': {'type': valid_value_types}
                     }
                 }
             ]
@@ -80,7 +81,7 @@ class TestJsonSchema:
                     'type': 'object',
                     'properties': {
                         'lookup': {'enum': valid_filters['sex']},
-                        'value': {'type': 'string'}
+                        'value': {'type': valid_value_types}
                     }
                 }
             ]
