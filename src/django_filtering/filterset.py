@@ -212,15 +212,20 @@ class FilterSet(metaclass=FilterSetType):
                 'message': err.message,
             })
 
-    def get_query(self, queryset) -> Q:
+    def get_query(self, queryset) -> Q | None:
         """Q object derived from query data. Only available after validation."""
         q = self._transmute(self.query_data, queryset)
         q = self._apply_sticky_filters(q, queryset)
         return q
 
-    def _transmute(self, query_data, queryset, _is_root=True) -> Q | None:
+    def _transmute(
+        self,
+        query_data: None | list,
+        queryset: QuerySet,
+        _is_root: bool = True
+    ) -> Q | None:
         """
-        Chane the given query data to a ``Q`` object.
+        Transmute the given query data to a ``Q`` object.
         """
         if not query_data:
             return None
@@ -230,6 +235,7 @@ class FilterSet(metaclass=FilterSetType):
         is_negated = False
         if key.upper() == "NOT":
             is_negated = True
+            # Unwrap the negated grouping
             key, value = value
 
         if key.upper() in self.valid_connectors:
@@ -241,14 +247,49 @@ class FilterSet(metaclass=FilterSetType):
                 if not q_child: continue
                 q = q._combine(q_child, connector)
             q.negated = is_negated
-            return q
         else:
             filter = self._get_filter(key)
-            q = filter.transmute(**value, queryset=queryset)
+            context = {
+                'filterset': self,
+                'queryset': queryset,
+                'filter': filter,
+                'criteria': value,  # typically {'value': object, 'lookup': str | list[str]}
+            }
+            tm = self.get_transmuter(context)
+            q = tm(**context)
+
             if _is_root or is_negated:
-                return Q.create(q.children, negated=is_negated)
-            else:
-                return q
+                q = Q.create(q.children, negated=is_negated)
+        return q
+
+    def get_transmuter(self, context):
+        """
+        Obtains the transmuter function given contextual information.
+        Returns a callable that will transmute the context into a Q instance.
+
+        Definition of a custom transmuter can be done by creating a method on the `FilterSet`
+        named `transmute_<filter>` and/or more specific to the lookup as `transmute_<filter>__<lookup...>`.
+        These transmuter methods are intended to provide the developer with
+        an easy way to override the default transmute logic of the filter.
+        """
+        # FIXME The lookup is optional, but we don't have a fully formed case where
+        #       the default lookup information is not available.
+        lookup = context['criteria'].get('lookup', '')
+        if isinstance(lookup, list):
+            lookup = '__'.join(lookup)
+
+        filter = context['filter']
+        funcs = [
+            f"transmute_{filter.name}__{lookup}",
+            f"transmute_{filter.name}",
+            filter.transmute,
+        ]
+        for func in funcs:
+            if isinstance(func, str):
+                func = getattr(self, func, None)
+                if func is None: continue
+            return func
+        return
 
     def _apply_sticky_filters(self, q, queryset):
         """

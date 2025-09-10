@@ -22,10 +22,9 @@ class BaseLookup:
     This may be used by the frontend implemenation to display
     the lookup's relationship to a field.
     """
-    type = 'input'
+    type = None
 
-    def __init__(self, name, label=None):
-        self.name = name
+    def __init__(self, label=None):
         if label is None:
             raise ValueError("At this time, the lookup label must be provided.")
         self.label = label
@@ -37,14 +36,41 @@ class BaseLookup:
             "label": self.label,
         }
 
+    def transmute(self, filterset=None, filter=None, queryset=None, criteria=None, **kwargs) -> Q | None:
+        raise NotImplementedError()
 
-class InputLookup(BaseLookup):
+
+class BaseSingleFieldLookup(BaseLookup):
+    """
+    Lookup for a single field on a model.
+    The ``name`` parameter is a valid field lookup (e.g. `icontains`, `exact`).
+    """
+
+    def __init__(self, name, *args, **kwargs):
+        self.name = name
+        super().__init__(*args, **kwargs)
+
+    def transmute(self, **kwargs) -> Q | None:
+        """
+        Produces a ``Q`` object from the query data criteria using the known information.
+        """
+        filter = kwargs['filter']
+        criteria = kwargs['criteria']
+        return Q(construct_field_lookup_arg(
+            filter.name,
+            criteria['value'],
+            criteria['lookup'],
+        ))
+
+
+class InputLookup(BaseSingleFieldLookup):
     """
     Represents an text input type field lookup.
     """
+    type = 'input'
 
 
-class ChoiceLookup(BaseLookup):
+class ChoiceLookup(BaseSingleFieldLookup):
     """
     Represents a choice selection input type field lookup.
 
@@ -119,7 +145,7 @@ class Filter:
         if label is None:
             raise ValueError("At this time, the filter label must be provided.")
         self.label = label
-        self._transmuter = transmuter or self._default_transmuter
+        self._transmuter = transmuter
         # Sticky filter properties used to designate the default sticky value
         # and solvent value that removes the sticky value from the resulting query.
         self.sticky_value = sticky_value
@@ -145,7 +171,13 @@ class Filter:
         Returns a ``Q`` object with the sticky value
         """
         if self.sticky_value is not None:
-            return self.transmute(value=self.sticky_value, queryset=queryset)
+            context = {
+                'filterset': self.filterset,
+                'filter': self,
+                'queryset': queryset,
+                'criteria': {'value': self.sticky_value},
+            }
+            return self.transmute(**context)
         return None
 
     def get_options_schema_info(self, queryset):
@@ -169,32 +201,27 @@ class Filter:
             info['sticky_default'] = deconstruct_query(self.get_sticky_Q(queryset))
         return info
 
-    def clean(self, value):
+    def clean(self, criteria):
         """
         Clean the value for database usage.
         """
+        result = criteria.copy()
+        value = criteria['value']
         if value == self.solvent_value:
-            return STICKY_SOLVENT_VALUE
-        return value
+            result['value'] = STICKY_SOLVENT_VALUE
+        return result
 
-    def _default_transmuter(self, value, queryset, **kwargs) -> Q | None:
-        """
-        Produces a ``Q`` object from the query data criteria using the known information.
-        """
-        lookup = kwargs.setdefault('lookup', self.default_lookup)
-        return Q(construct_field_lookup_arg(
-            self.name,
-            value,
-            lookup,
-        ))
-
-    def transmute(self, value, queryset, **kwargs) -> Q | None:
+    def transmute(self, criteria, **kwargs) -> Q | None:
         """
         Produces a ``Q`` object from the query data criteria.
         """
-        value = self.clean(value)
-        if value == STICKY_SOLVENT_VALUE:
+        criteria = self.clean(criteria)
+        if criteria['value'] == STICKY_SOLVENT_VALUE:
             # Explicity user selection to remove the sticky filter.
             return None
-        kwargs.setdefault('lookup', self.default_lookup)
-        return self._transmuter(value, queryset, **kwargs)
+        criteria.setdefault('lookup', self.default_lookup)
+        if self._transmuter:
+            return self._transmuter(criteria=criteria, **kwargs)
+        else:
+            lookup = [lu for lu in self.lookups if lu.name == criteria['lookup']][0]
+            return lookup.transmute(criteria=criteria, **kwargs)

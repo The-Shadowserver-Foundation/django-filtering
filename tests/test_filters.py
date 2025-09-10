@@ -242,15 +242,21 @@ class TestFilter:
 
         # Check translation of _query data's criteria_ to django Q argument
         criteria = {'lookup': 'gte', 'value': '50'}
-        assert filter.transmute(**criteria, queryset=None) == models.Q(pages__gte='50')
+        context = {
+            'filterset': None,  # not needed for this test
+            'filter': filter,
+            'queryset': None,  # not needed for this test
+            'criteria': criteria,
+        }
+        assert filter.transmute(**context) == models.Q(pages__gte='50')
 
     def test_valid_json_types(self):
         # TODO Expand this test to cover native json types: number, null, array, and object.
 
-        def assertion_transmuter(value, queryset, **kwargs):
+        def assertion_transmuter(criteria, **kwargs):
             from django.db.models import Q
 
-            assert isinstance(value, bool)
+            assert isinstance(criteria['value'], bool)
             return Q(something__in=['a', 'b', 'c'])
 
         filter = filters.Filter(
@@ -259,7 +265,13 @@ class TestFilter:
             transmuter=assertion_transmuter,
         )
         criteria = {'lookup': 'exact', 'value': True}
-        assert filter.transmute(**criteria, queryset=None)
+        context = {
+            'filterset': None,  # not needed for this test
+            'filter': filter,
+            'queryset': None,  # not needed for this test
+            'criteria': criteria,
+        }
+        assert filter.transmute(**context)
 
 
 class TestStickyFilter:
@@ -292,11 +304,23 @@ class TestStickyFilter:
 
         # Check translation of query data's criteria to django Q argument
         criteria = {'lookup': 'exact', 'value': 'bulk'}
-        assert filter.transmute(**criteria, queryset=None) == models.Q(type__exact='bulk')
+        context = {
+            'filterset': None,  # not needed for this test
+            'filter': filter,
+            'queryset': None,  # not needed for this test
+            'criteria': criteria,
+        }
+        assert filter.transmute(**context) == models.Q(type__exact='bulk')
 
         # Ensure value does not translate to a Q argument
         criteria = {'lookup': 'exact', 'value': solvent_value}
-        assert filter.transmute(**criteria, queryset=None) == None
+        context = {
+            'filterset': None,  # not needed for this test
+            'filter': filter,
+            'queryset': None,  # not needed for this test
+            'criteria': criteria,
+        }
+        assert filter.transmute(**context) == None
 
         # Check the default Q argument
         assert filter.get_sticky_Q(queryset=None) == models.Q(type__exact=sticky_value)

@@ -1,6 +1,3 @@
-from django.db.models import Q
-
-
 CONTINENT_CHOICES = [
     ('AS', 'Asia'),
     ('AF', 'Africa'),
@@ -16,7 +13,7 @@ CONTINENT_COUNTRIES_MAP = {
     'NA': ['CAN', 'MEX', 'USA', 'BMU', 'GRL']
 }
 
-def continent_to_countries(value, queryset, **kwargs) -> Q:
+def continent_to_countries(value) -> list[str]:
     if value != 'NA':
         raise Exception("Testing scope is limited to the 'NA' choice.")
-    return Q(country__in=CONTINENT_COUNTRIES_MAP[value])
+    return CONTINENT_COUNTRIES_MAP[value]
