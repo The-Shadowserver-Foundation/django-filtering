@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 import django_filtering as filtering
 
 from . import models
@@ -27,10 +29,12 @@ class StudyFilterSet(filtering.FilterSet):
             label="is",
             choices=utils.CONTINENT_CHOICES,
         ),
-        default_lookup='exact',
         label="Continent",
-        transmuter=utils.continent_to_countries,
     )
+
+    def transmute_continent(self, criteria, **kwargs):
+        country_codes = utils.continent_to_countries(criteria['value'])
+        return Q(country__in=country_codes)
 
     class Meta:
         model = models.Study
