@@ -1,3 +1,4 @@
+import datetime
 from unittest import mock
 
 import pytest
@@ -132,6 +133,46 @@ class TestChoiceLookup:
 
         # Target
         assert lookup.transmute(filter=filter, criteria=criteria) == models.Q(count__gte=10)
+
+
+class TestDateRangeLookup:
+    """
+    Testing the InputLookup
+    """
+
+    def test(self):
+        lookup_name = 'rangez'
+        label = "between"
+        field = models.DateField()
+        filter = mock.Mock()
+        filter.name = 'created'
+        d1, d2 = [datetime.date(2025, 1, 1), datetime.date(2025, 8, 31)]
+
+        # Target
+        lookup = filters.DateRangeLookup(lookup_name, label=label)
+
+        # Check options schema output
+        options_schema_blurb = lookup.get_options_schema_definition(field)
+        expected = {'type': 'date-range', 'label': label}
+        assert options_schema_blurb == expected
+
+        # Check the cleaning of the values in the filter criteria
+        dirty = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
+        cleaned = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
+        assert lookup.clean(dirty) == cleaned
+
+        # Check the transmutation of the criteria to Q instance.
+        expected = models.Q(**{
+            f'{filter.name}__gte': d1.isoformat(),
+            f'{filter.name}__lte': d2.isoformat(),
+        })
+        assert lookup.transmute(filter=filter, criteria=cleaned) == expected
+
+    @pytest.mark.skip(reason="not yet implemented")
+    def test_validation(self):
+        # Check the validation of jsonschema 'date' format
+        # Note, `format` validation requires explicit configuration in jsonschema.
+        pass
 
 
 class TestFilter:

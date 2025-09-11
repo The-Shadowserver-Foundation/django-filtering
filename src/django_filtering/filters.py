@@ -112,6 +112,35 @@ class ChoiceLookup(SingleFieldLookup):
         return definition
 
 
+class DateRangeLookup(Lookup):
+    """
+    Represents inputs for querying between a date range.
+
+    """
+    type = 'date-range'
+
+    # At this time there is no reason to _clean_ the value
+    # and turn it into a `datetime.date`.
+    # The database is capable of casting a string to its native date type
+    # as long we enforce iso 8601 formatting.
+
+    def transmute(self, **kwargs):
+        filter = kwargs['filter']
+        criteria = kwargs['criteria']
+        return Q(
+            construct_field_lookup_arg(
+                filter.name,
+                criteria['value'][0],
+                'gte',
+            ),
+            construct_field_lookup_arg(
+                filter.name,
+                criteria['value'][1],
+                'lte',
+            )
+        )
+
+
 # A sentry value used to signal when the user has selected
 # to remove the sticky filter.
 STICKY_SOLVENT_VALUE = object()

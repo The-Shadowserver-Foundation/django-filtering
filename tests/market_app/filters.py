@@ -15,6 +15,7 @@ class ProductFilterSet(filtering.FilterSet):
         label="Category",
     )
     stocked_on = filtering.Filter(
+        filtering.DateRangeLookup('range', label="between"),
         filtering.InputLookup(['year', 'gte'], label="year >="),
         label="Stocked",
     )
