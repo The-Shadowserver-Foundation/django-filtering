@@ -203,15 +203,25 @@ class Filter:
             info['sticky_default'] = deconstruct_query(self.get_sticky_Q(queryset))
         return info
 
-    def clean(self, criteria):
+    def get_lookup(self, name=None) -> Lookup:
+        if name is None:
+            name = self.default_lookup
+        return [lu for lu in self.lookups if lu.name == name][0]
+
+    def clean(self, criteria) -> dict[str, Any]:
         """
-        Clean the value for database usage.
+        Clean the criteria for database usage.
         """
-        result = criteria.copy()
-        value = criteria['value']
-        if value == self.solvent_value:
-            result['value'] = STICKY_SOLVENT_VALUE
-        return result
+        # Make a copy of the criteria that we will mutate.
+        cleaned = criteria.copy()
+
+        # Defer to the lookup instance for cleaning specifics
+        cleaned['value'] = self.get_lookup(criteria.get('lookup')).clean(criteria['value'])
+
+        # Check if the cleaned value is the solvent that removes the sticky filter.
+        if cleaned['value'] == self.solvent_value:
+            cleaned['value'] = STICKY_SOLVENT_VALUE
+        return cleaned
 
     def transmute(self, criteria, **kwargs) -> Q | None:
         """
@@ -221,9 +231,10 @@ class Filter:
         if criteria['value'] == STICKY_SOLVENT_VALUE:
             # Explicity user selection to remove the sticky filter.
             return None
-        criteria.setdefault('lookup', self.default_lookup)
+
+        # Set the lookup name for the transmuter's convenience.
+        lookup_name = criteria.setdefault('lookup', self.default_lookup)
         if self._transmuter:
             return self._transmuter(criteria=criteria, **kwargs)
         else:
-            lookup = [lu for lu in self.lookups if lu.name == criteria['lookup']][0]
-            return lookup.transmute(criteria=criteria, **kwargs)
+            return self.get_lookup(lookup_name).transmute(criteria=criteria, **kwargs)
