@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Q
@@ -8,13 +9,14 @@ from .utils import construct_field_lookup_arg, deconstruct_query
 
 __all__ = (
     'ChoiceLookup',
+    'DateRangeLookup',
     'InputLookup',
     'Filter',
     'STICKY_SOLVENT_VALUE',
 )
 
 
-class BaseLookup:
+class Lookup:
     """
     Represents a model field database lookup.
     The ``name`` is a valid field lookup (e.g. `icontains`, `exact`).
@@ -24,7 +26,8 @@ class BaseLookup:
     """
     type = None
 
-    def __init__(self, label=None):
+    def __init__(self, name, label):
+        self.name = name
         if label is None:
             raise ValueError("At this time, the lookup label must be provided.")
         self.label = label
@@ -36,19 +39,18 @@ class BaseLookup:
             "label": self.label,
         }
 
+    def clean(self, value: Any):
+        return value
+
     def transmute(self, filterset=None, filter=None, queryset=None, criteria=None, **kwargs) -> Q | None:
         raise NotImplementedError()
 
 
-class BaseSingleFieldLookup(BaseLookup):
+class SingleFieldLookup(Lookup):
     """
     Lookup for a single field on a model.
     The ``name`` parameter is a valid field lookup (e.g. `icontains`, `exact`).
     """
-
-    def __init__(self, name, *args, **kwargs):
-        self.name = name
-        super().__init__(*args, **kwargs)
 
     def transmute(self, **kwargs) -> Q | None:
         """
@@ -63,14 +65,14 @@ class BaseSingleFieldLookup(BaseLookup):
         ))
 
 
-class InputLookup(BaseSingleFieldLookup):
+class InputLookup(SingleFieldLookup):
     """
     Represents an text input type field lookup.
     """
     type = 'input'
 
 
-class ChoiceLookup(BaseSingleFieldLookup):
+class ChoiceLookup(SingleFieldLookup):
     """
     Represents a choice selection input type field lookup.
 
