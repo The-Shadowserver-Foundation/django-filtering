@@ -1,15 +1,9 @@
+from django.db.models import Q
+
 import django_filtering as filtering
 
 from . import models
 
-
-def query_in_stock(value, queryset, **kwargs):
-    from django.db.models import Q
-
-    if value is True:
-        return Q(quantity__gt=0)
-    else:
-        return Q(quantity__lt=0)
 
 class ProductFilterSet(filtering.FilterSet):
     name = filtering.Filter(
@@ -36,8 +30,15 @@ class ProductFilterSet(filtering.FilterSet):
     is_in_stock = filtering.Filter(
         filtering.ChoiceLookup('exact', label=":", choices=[(True, "Yes"), (False, "No")]),
         label="Is in stock?",
-        transmuter=query_in_stock,
     )
+
+    def transmute_is_in_stock(self, **kwargs):
+        value = kwargs['criteria']['value']
+
+        if value is True:
+            return Q(quantity__gt=0)
+        else:
+            return Q(quantity__lte=0)
 
     class Meta:
         model = models.Product
