@@ -24,6 +24,18 @@ class TestInputLookup:
         expected = {'type': 'input', 'label': label}
         assert options_schema_blurb == expected
 
+    def test_transmute(self):
+        lookup_name = 'gte'
+        label = ">="
+        filter_name = 'count'
+        filter = mock.Mock()
+        filter.name = filter_name
+        lookup = filters.InputLookup(lookup_name, label=label)
+        criteria = {'value': 10, 'lookup': lookup_name}
+
+        # Target
+        assert lookup.transmute(filter=filter, criteria=criteria) == models.Q(count__gte=10)
+
 
 class TestChoiceLookup:
     """
@@ -107,6 +119,19 @@ class TestChoiceLookup:
             'choices': static_choices,
         }
         assert options_schema_blurb == expected
+
+    def test_transmute(self):
+        lookup_name = 'gte'
+        label = ">="
+        filter_name = 'count'
+        filter = mock.Mock()
+        filter.name = filter_name
+        choices = [(10, 'diez'), (25, 'veinticinco'), (50, 'cincuenta'), (100, 'ciento')]
+        lookup = filters.ChoiceLookup(lookup_name, label=label, choices=choices)
+        criteria = {'value': 10, 'lookup': lookup_name}
+
+        # Target
+        assert lookup.transmute(filter=filter, criteria=criteria) == models.Q(count__gte=10)
 
 
 class TestFilter:
