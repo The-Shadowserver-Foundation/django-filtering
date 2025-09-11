@@ -155,7 +155,7 @@ class Filter:
 
     The ``name`` attribute is assigned by the FilterSet's metaclass.
     """
-    name = None
+    _name = None
     filterset = None
 
     def __init__(
@@ -182,13 +182,17 @@ class Filter:
         self.sticky_value = sticky_value
         self.solvent_value = solvent_value
 
+    @property
+    def name(self):
+        return self._name
+
     def bind(self, name: str, filterset: 'FilterSet') -> 'Filter':
         """
         Returns a copy of this filter,
         with assignments from the given ``name`` and ``filterset`` instance.
         """
         filter = deepcopy(self)
-        filter.name = name
+        filter._name = name
         filter.filterset = filterset
         filter.model = filterset._meta.model
         return filter
