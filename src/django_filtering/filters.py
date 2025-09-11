@@ -42,7 +42,7 @@ class Lookup:
     def clean(self, value: Any):
         return value
 
-    def transmute(self, filterset=None, filter=None, queryset=None, criteria=None, **kwargs) -> Q | None:
+    def transmute(self, **kwargs) -> Q | None:
         raise NotImplementedError()
 
 
@@ -252,18 +252,21 @@ class Filter:
             cleaned['value'] = STICKY_SOLVENT_VALUE
         return cleaned
 
-    def transmute(self, criteria, **kwargs) -> Q | None:
+    def transmute(self, **kwargs) -> Q | None:
         """
         Produces a ``Q`` object from the query data criteria.
         """
-        criteria = self.clean(criteria)
+        criteria = self.clean(kwargs['criteria'])
         if criteria['value'] == STICKY_SOLVENT_VALUE:
             # Explicity user selection to remove the sticky filter.
             return None
 
         # Set the lookup name for the transmuter's convenience.
         lookup_name = criteria.setdefault('lookup', self.default_lookup)
+
+        kwargs['criteria'] = criteria
         if self._transmuter:
-            return self._transmuter(criteria=criteria, **kwargs)
+            transmuter = self._transmuter
         else:
-            return self.get_lookup(lookup_name).transmute(criteria=criteria, **kwargs)
+            transmuter = self.get_lookup(lookup_name).transmute
+        return transmuter(**kwargs)
