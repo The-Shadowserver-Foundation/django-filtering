@@ -297,8 +297,8 @@ class FilterSet(metaclass=FilterSetType):
 
         Sticky filters are applied when the user provided query data
         does not contain the sticky filter
-        or when the default value has been set to anything other than
-        the __unstick value__.
+        or when the sticky or default value have been set to anything other than
+        the solvent value.
         """
         # Define the set of filter names used in the current query data.
         if len(self.query_data) >= 2:
@@ -312,13 +312,6 @@ class FilterSet(metaclass=FilterSetType):
             if sf.name not in query_data_filter_names:
                 # Anding the sticky filter's default Q
                 sticky_q &= sf.get_sticky_Q(queryset=queryset)
-            # Note, at this point in the process,
-            # the sticky filter should not be part of the Q set,
-            # because the UNSTICK_VALUE has prevented it from being included.
-            # This assumes that `_make_Q`, and supporting method on `Filter`,
-            # are correctly implemented to exclude the filter from the Q set.
-            # Reminder, it is necessary for the sticky filter
-            # to be in the query data in order for it to be unstuck.
 
         return sticky_q & q if q else sticky_q
 
