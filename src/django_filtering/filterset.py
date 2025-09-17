@@ -218,6 +218,13 @@ class FilterSet(metaclass=FilterSetType):
         q = self._apply_sticky_filters(q, queryset)
         return q
 
+    def make_context(self, filter, queryset=None) -> dict[str, Any]:
+        return {
+            'filterset': self,
+            'queryset': queryset or self.get_default_queryset(),
+            'filter': filter,
+        }
+
     def _transmute(
         self,
         query_data: None | list,
@@ -248,21 +255,13 @@ class FilterSet(metaclass=FilterSetType):
                 q = q._combine(q_child, connector)
             q.negated = is_negated
         else:
-            filter = self._get_filter(key)
-            context = {
-                'filterset': self,
-                'queryset': queryset,
-                'filter': filter,
-                'criteria': value,  # typically {'value': object, 'lookup': str | list[str]}
-            }
-            tm = self.get_transmuter(context)
-            q = tm(**context)
-
-            if _is_root or is_negated:
+            context = self.make_context(filter=self._get_filter(key), queryset=queryset)
+            q = self.call_transmuter(value, context)
+            if q and (_is_root or is_negated):
                 q = Q.create(q.children, negated=is_negated)
         return q
 
-    def get_transmuter(self, context):
+    def call_transmuter(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         """
         Obtains the transmuter function given contextual information.
         Returns a callable that will transmute the context into a Q instance.
@@ -274,22 +273,18 @@ class FilterSet(metaclass=FilterSetType):
         """
         # FIXME The lookup is optional, but we don't have a fully formed case where
         #       the default lookup information is not available.
-        lookup = context['criteria'].get('lookup', '')
+        lookup = criteria.get('lookup', '')
         if isinstance(lookup, list):
             lookup = '__'.join(lookup)
 
         filter = context['filter']
         funcs = [
-            f"transmute_{filter.name}__{lookup}",
-            f"transmute_{filter.name}",
+            getattr(self, f"transmute_{filter.name}__{lookup}", None),
+            getattr(self, f"transmute_{filter.name}", None),
             filter.transmute,
         ]
-        for func in funcs:
-            if isinstance(func, str):
-                func = getattr(self, func, None)
-                if func is None: continue
-            return func
-        return
+        transmuter = [f for f in funcs if f is not None][0]
+        return transmuter(criteria, context=context)
 
     def _apply_sticky_filters(self, q, queryset):
         """
@@ -311,7 +306,7 @@ class FilterSet(metaclass=FilterSetType):
         for sf in self.sticky_filters:
             if sf.name not in query_data_filter_names:
                 # Anding the sticky filter's default Q
-                sticky_q &= sf.get_sticky_Q(queryset=queryset)
+                sticky_q &= sf.get_sticky_Q(context=self.make_context(filter=sf))
 
         return sticky_q & q if q else sticky_q
 
