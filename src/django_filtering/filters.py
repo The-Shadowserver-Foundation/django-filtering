@@ -151,10 +151,11 @@ class Filter:
     to auto-select the lookup relationship.
     The ``label`` is the human readable name of the field.
 
-    The ``name`` attribute is assigned by the FilterSet's metaclass.
+    The ``_name`` attribute is assigned by the FilterSet's metaclass
+    through the ``bind`` method.
+
     """
     _name = None
-    filterset = None
 
     def __init__(
         self,
@@ -184,14 +185,13 @@ class Filter:
     def name(self):
         return self._name
 
-    def bind(self, name: str, filterset: 'FilterSet') -> 'Filter':
+    def bind(self, name: str) -> 'Filter':
         """
-        Returns a copy of this filter,
-        with assignments from the given ``name`` and ``filterset`` instance.
+        Returns a copy of this filter with assignments from the given ``name``,
+        which is the name given to the Filter in the FilterSet.
         """
         filter = deepcopy(self)
         filter._name = name
-        filter.filterset = filterset
         return filter
 
     @property

@@ -233,7 +233,7 @@ class TestFilter:
         model = mock.MagicMock()
         filterset._meta.model = model
         model._meta.get_field.return_value = field
-        filter = filter.bind(filter_field_name, filterset)
+        filter = filter.bind(filter_field_name)
 
         # Check options schema output
         context = {'filterset': filterset, 'filter': filter, 'queryset': None}
@@ -271,7 +271,7 @@ class TestFilter:
         # Mock the bound (i.e. `Filter.bind`) instance of the filter.
         filterset = mock.MagicMock()
         filterset._meta.model._meta.get_field.side_effect = FieldDoesNotExist()
-        filter = filter.bind(filter_name, filterset)
+        filter = filter.bind(filter_name)
 
         # Check options schema output
         context = {'filterset': filterset, 'filter': filter, 'queryset': None}
@@ -308,7 +308,7 @@ class TestFilter:
             *[cls(*a, **kw) for cls, a, kw in lookups_data],
             label=label,
         )
-        filter = filter.bind(name='pages', filterset=None)
+        filter = filter.bind(name='pages')
 
         # Check translation of _query data's criteria_ to django Q argument
         criteria = {'lookup': 'gte', 'value': '50'}
@@ -368,7 +368,7 @@ class TestStickyFilter:
         )
         # Manually set the Filter's name attribute,
         # which is otherwise handled by the FilterSet metaclass.
-        filter = filter.bind(name='type', filterset=None)
+        filter = filter.bind(name='type')
 
         # Check translation of query data's criteria to django Q argument
         criteria = {'lookup': 'exact', 'value': 'bulk'}
