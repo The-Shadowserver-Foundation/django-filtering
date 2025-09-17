@@ -86,9 +86,9 @@ class FilterSetType(type):
 
         # Pull out filters from the class definition
         meta_opts['_declared_filters'] = {
-            key: attrs.pop(key)
-            for key, value in list(attrs.items())
-            if isinstance(value, Filter)
+            attr_name: attrs.pop(attr_name).bind(attr_name)
+            for attr_name, filter in list(attrs.items())
+            if isinstance(filter, Filter)
         }
 
         # Declare meta class options for runtime usage
@@ -129,28 +129,23 @@ class FilterSet(metaclass=FilterSetType):
         # Create the filtering options schema
         # to provide the frontend with the available filtering options.
         self.filtering_options_schema = FilteringOptionsSchema(self)
-        # Bind the filters to this FilterSet
-        self._filters = [
-            filter.bind(name, self)
-            for name, filter in self._meta.filters.items()
-        ]
 
     def get_default_queryset(self):
         return self._meta.model.objects.all()
 
-    @property
+    @cached_property
     def filters(self) -> list[Filter]:
-        return self._filters
+        return list(self._meta.filters.values())
 
     def _get_filter(self, name: str) -> Filter:
         """
         Get the filter object by name
         """
-        return {f.name: f for f in self._filters}[name]
+        return self._meta.filters[name]
 
-    @property
+    @cached_property
     def sticky_filters(self) -> list[Filter]:
-        return [f for f in self._filters if f.is_sticky]
+        return [f for f in self.filters if f.is_sticky]
 
     def filter_queryset(self, queryset=None) -> QuerySet:
         if queryset is None:
