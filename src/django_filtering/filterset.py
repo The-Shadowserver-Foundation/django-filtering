@@ -1,6 +1,6 @@
 import warnings
 from functools import cached_property
-from typing import Any, List, Tuple
+from typing import Any
 
 import jsonschema
 from django.conf import settings
@@ -8,7 +8,6 @@ from django.db.models import Q, QuerySet
 
 from .filters import Filter
 from .schema import JSONSchema, FilteringOptionsSchema
-from .utils import merge_dicts
 
 
 class MetadataException(Exception):
