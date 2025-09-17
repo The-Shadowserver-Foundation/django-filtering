@@ -35,7 +35,7 @@ class TestInputLookup:
         criteria = {'value': 10, 'lookup': lookup_name}
 
         # Target
-        assert lookup.transmute(filter=filter, criteria=criteria) == models.Q(count__gte=10)
+        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(count__gte=10)
 
 
 class TestChoiceLookup:
@@ -132,7 +132,7 @@ class TestChoiceLookup:
         criteria = {'value': 10, 'lookup': lookup_name}
 
         # Target
-        assert lookup.transmute(filter=filter, criteria=criteria) == models.Q(count__gte=10)
+        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(count__gte=10)
 
 
 class TestDateRangeLookup:
@@ -157,16 +157,16 @@ class TestDateRangeLookup:
         assert options_schema_blurb == expected
 
         # Check the cleaning of the values in the filter criteria
-        dirty = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
-        cleaned = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
-        assert lookup.clean(dirty) == cleaned
+        dirty_criteria = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
+        cleaned_criteria = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
+        assert lookup.clean(dirty_criteria) == cleaned_criteria
 
         # Check the transmutation of the criteria to Q instance.
         expected = models.Q(**{
             f'{filter.name}__gte': d1.isoformat(),
             f'{filter.name}__lte': d2.isoformat(),
         })
-        assert lookup.transmute(filter=filter, criteria=cleaned) == expected
+        assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
 
     @pytest.mark.skip(reason="not yet implemented")
     def test_validation(self):
@@ -230,11 +230,14 @@ class TestFilter:
 
         # Mock the bound (i.e. `Filter.bind`) instance of the filter.
         filterset = mock.MagicMock()
-        filterset._meta.model._meta.get_field.return_value = field
+        model = mock.MagicMock()
+        filterset._meta.model = model
+        model._meta.get_field.return_value = field
         filter = filter.bind(filter_field_name, filterset)
 
         # Check options schema output
-        options_schema_info = filter.get_options_schema_info(queryset=None)
+        context = {'filterset': filterset, 'filter': filter, 'queryset': None}
+        options_schema_info = filter.get_options_schema_info(context)
         expected = {
             'default_lookup': default_lookup,
             'label': label,
@@ -271,7 +274,8 @@ class TestFilter:
         filter = filter.bind(filter_name, filterset)
 
         # Check options schema output
-        options_schema_info = filter.get_options_schema_info(queryset=None)
+        context = {'filterset': filterset, 'filter': filter, 'queryset': None}
+        options_schema_info = filter.get_options_schema_info(context)
         expected = {
             'default_lookup': default_lookup,
             'label': label,
@@ -304,7 +308,7 @@ class TestFilter:
             *[cls(*a, **kw) for cls, a, kw in lookups_data],
             label=label,
         )
-        filter.name = 'pages'
+        filter = filter.bind(name='pages', filterset=None)
 
         # Check translation of _query data's criteria_ to django Q argument
         criteria = {'lookup': 'gte', 'value': '50'}
@@ -312,9 +316,8 @@ class TestFilter:
             'filterset': None,  # not needed for this test
             'filter': filter,
             'queryset': None,  # not needed for this test
-            'criteria': criteria,
         }
-        assert filter.transmute(**context) == models.Q(pages__gte='50')
+        assert filter.transmute(criteria, context=context) == models.Q(pages__gte='50')
 
     def test_valid_json_types(self):
         # TODO Expand this test to cover native json types: number, null, array, and object.
@@ -335,9 +338,8 @@ class TestFilter:
             'filterset': None,  # not needed for this test
             'filter': filter,
             'queryset': None,  # not needed for this test
-            'criteria': criteria,
         }
-        assert filter.transmute(**context)
+        assert filter.transmute(criteria, context=context)
 
 
 class TestStickyFilter:
@@ -366,7 +368,7 @@ class TestStickyFilter:
         )
         # Manually set the Filter's name attribute,
         # which is otherwise handled by the FilterSet metaclass.
-        filter.name = 'type'
+        filter = filter.bind(name='type', filterset=None)
 
         # Check translation of query data's criteria to django Q argument
         criteria = {'lookup': 'exact', 'value': 'bulk'}
@@ -374,9 +376,8 @@ class TestStickyFilter:
             'filterset': None,  # not needed for this test
             'filter': filter,
             'queryset': None,  # not needed for this test
-            'criteria': criteria,
         }
-        assert filter.transmute(**context) == models.Q(type__exact='bulk')
+        assert filter.transmute(criteria, context=context) == models.Q(type__exact='bulk')
 
         # Ensure value does not translate to a Q argument
         criteria = {'lookup': 'exact', 'value': solvent_value}
@@ -384,9 +385,8 @@ class TestStickyFilter:
             'filterset': None,  # not needed for this test
             'filter': filter,
             'queryset': None,  # not needed for this test
-            'criteria': criteria,
         }
-        assert filter.transmute(**context) == None
+        assert filter.transmute(criteria, context=context) == None
 
         # Check the default Q argument
-        assert filter.get_sticky_Q(queryset=None) == models.Q(type__exact=sticky_value)
+        assert filter.get_sticky_Q(context=context) == models.Q(type__exact=sticky_value)

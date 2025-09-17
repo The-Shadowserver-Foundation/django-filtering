@@ -42,7 +42,7 @@ class Lookup:
     def clean(self, value: Any):
         return value
 
-    def transmute(self, **kwargs) -> Q | None:
+    def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         raise NotImplementedError()
 
 
@@ -52,12 +52,11 @@ class SingleFieldLookup(Lookup):
     The ``name`` parameter is a valid field lookup (e.g. `icontains`, `exact`).
     """
 
-    def transmute(self, **kwargs) -> Q | None:
+    def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         """
         Produces a ``Q`` object from the query data criteria using the known information.
         """
-        filter = kwargs['filter']
-        criteria = kwargs['criteria']
+        filter = context['filter']
         return Q(construct_field_lookup_arg(
             filter.name,
             criteria['value'],
@@ -124,9 +123,8 @@ class DateRangeLookup(Lookup):
     # The database is capable of casting a string to its native date type
     # as long we enforce iso 8601 formatting.
 
-    def transmute(self, **kwargs):
-        filter = kwargs['filter']
-        criteria = kwargs['criteria']
+    def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
+        filter = context['filter']
         return Q(
             construct_field_lookup_arg(
                 filter.name,
@@ -194,31 +192,25 @@ class Filter:
         filter = deepcopy(self)
         filter._name = name
         filter.filterset = filterset
-        filter.model = filterset._meta.model
         return filter
 
     @property
     def is_sticky(self):
         return self.sticky_value is not None
 
-    def get_sticky_Q(self, queryset) -> Q | None:
+    def get_sticky_Q(self, context: dict[str, Any]) -> Q | None:
         """
         Returns a ``Q`` object with the sticky value
         """
         if self.sticky_value is not None:
-            context = {
-                'filterset': self.filterset,
-                'filter': self,
-                'queryset': queryset,
-                'criteria': {'value': self.sticky_value},
-            }
-            return self.transmute(**context)
+            return self.transmute({'value': self.sticky_value}, context=context)
         return None
 
-    def get_options_schema_info(self, queryset):
+    def get_options_schema_info(self, context: dict[str, Any]):
         lookups = {}
+        model = context['filterset']._meta.model
         try:
-            field = self.model._meta.get_field(self.name)
+            field = model._meta.get_field(self.name)
         except FieldDoesNotExist:
             field = None
 
@@ -233,7 +225,7 @@ class Filter:
             info['help_text'] = field.help_text
         if self.is_sticky:
             info['is_sticky'] = True
-            info['sticky_default'] = deconstruct_query(self.get_sticky_Q(queryset))
+            info['sticky_default'] = deconstruct_query(self.get_sticky_Q(context))
         return info
 
     def get_lookup(self, name=None) -> Lookup:
@@ -256,11 +248,11 @@ class Filter:
             cleaned['value'] = STICKY_SOLVENT_VALUE
         return cleaned
 
-    def transmute(self, **kwargs) -> Q | None:
+    def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         """
         Produces a ``Q`` object from the query data criteria.
         """
-        criteria = self.clean(kwargs['criteria'])
+        criteria = self.clean(criteria)
         if criteria['value'] == STICKY_SOLVENT_VALUE:
             # Explicity user selection to remove the sticky filter.
             return None
@@ -268,9 +260,8 @@ class Filter:
         # Set the lookup name for the transmuter's convenience.
         lookup_name = criteria.setdefault('lookup', self.default_lookup)
 
-        kwargs['criteria'] = criteria
         if self._transmuter:
             transmuter = self._transmuter
         else:
             transmuter = self.get_lookup(lookup_name).transmute
-        return transmuter(**kwargs)
+        return transmuter(criteria, context=context)

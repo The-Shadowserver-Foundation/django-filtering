@@ -32,7 +32,7 @@ class StudyFilterSet(filtering.FilterSet):
         label="Continent",
     )
 
-    def transmute_continent(self, criteria, **kwargs):
+    def transmute_continent(self, criteria, context):
         country_codes = utils.continent_to_countries(criteria['value'])
         return Q(country__in=country_codes)
 

@@ -33,8 +33,8 @@ class ProductFilterSet(filtering.FilterSet):
         label="Is in stock?",
     )
 
-    def transmute_is_in_stock(self, **kwargs):
-        value = kwargs['criteria']['value']
+    def transmute_is_in_stock(self, criteria, context):
+        value = criteria['value']
 
         if value is True:
             return Q(quantity__gt=0)
