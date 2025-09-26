@@ -26,10 +26,8 @@ class Lookup:
     """
     type = None
 
-    def __init__(self, name, label):
+    def __init__(self, name: str, label: str):
         self.name = name
-        if label is None:
-            raise ValueError("At this time, the lookup label must be provided.")
         self.label = label
 
     def get_options_schema_definition(self, field=None):
