@@ -303,7 +303,7 @@ class TestFilterSetTransmutesQueryData:
             "and",
             (
                 ("category", {"lookup": "in", "value": ["Kitchen", "Bath"]}),
-                ("stocked_on", {"lookup": ["year", "gte"], "value": "2024"}),
+                ("stocked_on", {"lookup": "year__gte", "value": "2024"}),
                 (
                     "or",
                     (

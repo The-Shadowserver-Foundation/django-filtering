@@ -113,6 +113,12 @@ class TestFilteringOptionsSchema:
                     ('i', 'Intersex',),
                 ],
             }},
+            "siblings": {
+                "name__icontains": {
+                    "type": "input",
+                    "label": "name contains",
+                },
+            },
         }
 
         class TestFilterSet(FilterSet):
@@ -126,6 +132,10 @@ class TestFilteringOptionsSchema:
                 filters.ChoiceLookup('exact', label='matches'),
                 default_lookup='exact',
                 label="Sex",
+            )
+            siblings = filters.Filter(
+                filters.InputLookup('name__icontains', label="name contains"),
+                label="Sibling",
             )
 
             class Meta:

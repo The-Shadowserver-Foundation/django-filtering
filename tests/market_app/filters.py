@@ -16,11 +16,11 @@ class ProductFilterSet(filtering.FilterSet):
     )
     stocked_on = filtering.Filter(
         filtering.DateRangeLookup('range', label="between"),
-        filtering.InputLookup(['year', 'gte'], label="year >="),
+        filtering.InputLookup('year__gte', label="year >="),
         label="Stocked",
     )
     quantity = filtering.Filter(
-        filtering.InputLookup(['gte'], label=">="),
+        filtering.InputLookup('gte', label=">="),
         label="Quantity",
     )
     brand = filtering.Filter(

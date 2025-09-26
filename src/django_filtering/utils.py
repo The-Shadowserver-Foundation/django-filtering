@@ -10,26 +10,19 @@ QueryDataVar = List[str | Dict[str, Any]]
 
 def construct_field_lookup_name(
     field_name: str,
-    lookup: Optional[str | List[str]] = None,
+    lookup: Optional[str] = None,
 ) -> str:
     """
     Given a field name and lookup, produce a valid argument query filter argument name.
     """
-    sequence_types = (
-        list,
-        tuple,
-    )
-    lookup_expr = ''
-    if lookup is not None:
-        is_lookup_seq = isinstance(lookup, sequence_types)
-        lookup_expr = "__".join(['', *lookup] if is_lookup_seq else ['', lookup])
+    lookup_expr = '__'.join(['', lookup]) if lookup else ''
     return f"{field_name}{lookup_expr}"
 
 
 def construct_field_lookup_arg(
     field_name: str,
     value: Optional[Any] = None,
-    lookup: Optional[str | List[str]] = None,
+    lookup: Optional[str] = None,
 ) -> QArg:
     """
     Given a __query data__ structure make a field lookup value
@@ -48,13 +41,13 @@ def deconstruct_query(
     if len(query.children) >= 2:
         raise ValueError("Can only handle deconstruction of a single query value")
     field_lookup, value = query.children[0]
-    name, *lookups = field_lookup.split("__")
-    if not lookups:
-        lookups = 'exact'
-    elif isinstance(lookups, list) and len(lookups) == 1:
-        lookups = lookups[0]
-    opts = {'value': value}
-    if lookups: opts['lookup'] = lookups
+    split_info = field_lookup.split("__", 1)
+    name = split_info.pop(0)
+    if len(split_info) == 0:
+        lookup = 'exact'
+    else:
+        lookup = split_info.pop()
+    opts = {'value': value, 'lookup': lookup}
     return [name, opts]
 
 
