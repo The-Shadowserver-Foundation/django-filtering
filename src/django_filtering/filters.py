@@ -37,6 +37,9 @@ class Lookup:
             "label": self.label,
         }
 
+    def __repr__(self):
+        return f'<{self.__class__.__name__} name="{self.name}" type="{self.type}" label="{self.label}">'
+
     def clean(self, value: Any):
         return value
 
@@ -178,6 +181,17 @@ class Filter:
         # and solvent value that removes the sticky value from the resulting query.
         self.sticky_value = sticky_value
         self.solvent_value = solvent_value
+
+    def __repr__(self):
+        sup_repr = super().__repr__()
+        repr_parts = sup_repr.split('object')
+        return ' '.join(
+            [
+                repr_parts[0],
+                f'name="{self.name}"',
+                f'label="{self.label}"',
+            ] + repr_parts[1:],
+        )
 
     @property
     def name(self):
