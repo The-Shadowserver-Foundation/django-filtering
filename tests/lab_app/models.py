@@ -1,6 +1,54 @@
 from django.db import models
 
 
+class Credential(models.Model):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["name"]
+
+
+class Staff(models.Model):
+    name = models.CharField(max_length=255)
+    credentials = models.ManyToManyField(Credential)
+
+    def __str__(self):
+        return f"{self.name} ({', '.join(self.credentials)}"
+
+    class Meta:
+        ordering = ["name"]
+
+
+class Facility(models.Model):
+
+    class OccupancySize(models.IntegerChoices):
+        SMALL = 20
+        MEDIUM = 40
+        LARGE = 80
+
+    name = models.CharField(max_length=255)
+    max_occupancy = models.IntegerField(
+        default=OccupancySize.SMALL,
+        choices=OccupancySize.choices,
+    )
+    managed_by = models.ForeignKey(
+        Staff,
+        blank=False,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='manager_of_facilities',
+    )
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ["-max_occupancy"]
+
+
 class Participant(models.Model):
 
     class SexChoices(models.TextChoices):
@@ -16,9 +64,16 @@ class Participant(models.Model):
     sex = models.CharField(max_length=1, choices=SexChoices, default=SexChoices.UNKNOWN)
     is_paid = models.BooleanField()
     payment_amount = models.DecimalField(blank=True, null=True, max_digits=5, decimal_places=2)
+    facility = models.ForeignKey(
+        Facility,
+        blank=True,
+        null=True,
+        on_delete=models.SET_NULL,
+        related_name='participants',
+    )
 
     def __str__(self):
-        return self.name
+        return f"{self.name} @ {self.facility}"
 
     class Meta:
         ordering = ["id"]

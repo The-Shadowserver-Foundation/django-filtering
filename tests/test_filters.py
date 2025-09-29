@@ -4,6 +4,7 @@ from unittest import mock
 import pytest
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from model_bakery import baker
 
 from django_filtering import filters
 
@@ -390,3 +391,71 @@ class TestStickyFilter:
 
         # Check the default Q argument
         assert filter.get_sticky_Q(context=context) == models.Q(type__exact=sticky_value)
+
+
+@pytest.mark.django_db
+class TestFilterWithDBAccess:
+
+    def test_get_options_schema_info__resolves_relational_field(self):
+        from .lab_app.models import Credential, Staff, Facility, Participant
+
+        # Create some content to ensure choices are filled in from data.
+        cred1 = baker.make(Credential, name="PhD")
+        cred2 = baker.make(Credential, name="MD")
+        staff1 = baker.make(Staff, name="Ze Uhn", credentials=[cred1])
+        staff2 = baker.make(Staff, name="Vy Woh", credentials=[cred2])
+        baker.make(Facility, name="Fac A", max_occupancy=10, managed_by=staff1)
+        baker.make(Facility, name="Fac B", max_occupancy=22, managed_by=staff2)
+        baker.make(Facility, name="Fac C", max_occupancy=8, managed_by=staff1)
+
+        filter_field_name = 'facility'
+        label = "Facility"
+        #: Definition of lookups for a Filter in non-instantiated form,
+        #  so it can be used in expectation checks.
+        lookup_definitions = (
+            [filters.ChoiceLookup, ('exact',), {'label': 'is'}],
+            [filters.InputLookup, ('name__icontains',), {'label': 'name contains'}],
+            [filters.ChoiceLookup, ('max_occupancy',), {'label': 'is'}],
+            # Testing relation within relation, where `participants` is a foreignkey field
+            # Search for participants within a facility with participants of sex ___.
+            [filters.ChoiceLookup, ('participants__sex',), {'label': 'with participants of sex'}],
+            # Test relation within relation within relation,
+            # where foreignkey to foreignkey to many-to-many fields are in use.
+            # Search for participants within a facility managed by staff with credential ___.
+            [filters.ChoiceLookup, ('managed_by__credentials',), {'label': 'managed by staff with credential'}],
+        )
+        #: Additional information that is found in the to be tested schema
+        lookup_supporting_info = (
+            {'choices': [(obj.pk, str(obj),) for obj in Facility.objects.all()]},
+            {},
+            {'choices': Facility.OccupancySize.choices},
+            {'choices': Participant.SexChoices.choices},
+            {'choices': [(obj.pk, str(obj)) for obj in Credential.objects.all()]},
+        )
+        # Initialize the filter
+        filter = filters.Filter(
+            *[cls(*a, **kw) for cls, a, kw in lookup_definitions],
+            label=label,
+        )
+
+        filterset = mock.MagicMock()
+        model = Participant
+        filterset._meta.model = model
+
+        # Manually bind the filter's name
+        filter = filter.bind(filter_field_name)
+
+        # Check options schema output
+        context = {'filterset': filterset, 'filter': filter, 'queryset': None}
+
+        options_schema_info = filter.get_options_schema_info(context)
+        lookups_info = zip(lookup_definitions, lookup_supporting_info)
+        expected = {
+            'default_lookup': lookup_definitions[0][1][0],
+            'label': label,
+            'lookups': {
+                a[0]: {'label': kw['label'], 'type': cls.type, **info}
+                for (cls, a, kw), info in lookups_info
+            },
+        }
+        assert options_schema_info == expected

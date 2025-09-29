@@ -2,7 +2,7 @@ from copy import deepcopy
 from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import Q
+from django.db.models import Field, Model, Q
 
 from .utils import construct_field_lookup_arg, deconstruct_query
 
@@ -218,15 +218,57 @@ class Filter:
             return self.transmute({'value': self.sticky_value}, context=context)
         return None
 
+    def _resolve_field(
+        self,
+        context: dict[str, Any],
+        lookup: Lookup | list[str],
+        model: None | Model = None,
+        field_name: None | str = None,
+    ) -> Field | None:
+        """
+        Returns the ``django.db.models.Field` for the filter's lookup.
+        This filter's field could be a relational field,
+        which means the lookup expression may reference the related object's field.
+
+        The filter name can be a field name.
+        In those simple cases the filter's field is resolved using the filter's name.
+        ``None`` is returned when the filter name does not reference a model field.
+
+        Further resolution may be necesary when the filter's name references a relational field.
+        The lookup expression for a relational field may be sub-fields of the related model;
+        or in extreme cases additional sub-field references.
+        In this situation the field is resolved to the deepest referenced field in the lookup expression.
+
+        """
+        if model is None:
+            model = context['filterset']._meta.model
+
+        try:
+            field = model._meta.get_field(field_name or self.name)
+        except FieldDoesNotExist:
+            # This filter does not reference an actual field
+            return None
+
+        # If field is relational, look for sub-attributes in the lookup path.
+        if field.is_relation and lookup:
+            if isinstance(lookup, Lookup):
+                lookup = lookup.name.split('__')
+            current_lookup_name = lookup.pop(0)
+            if not field.get_lookup(current_lookup_name):
+                # Assume it is a field reference
+                field = self._resolve_field(
+                    context,
+                    lookup,
+                    model=field.related_model,
+                    field_name=current_lookup_name,
+                )
+
+        return field
+
     def get_options_schema_info(self, context: dict[str, Any]):
         lookups = {}
-        model = context['filterset']._meta.model
-        try:
-            field = model._meta.get_field(self.name)
-        except FieldDoesNotExist:
-            field = None
-
         for lu in self.lookups:
+            field = self._resolve_field(context, lu)
             lookups[lu.name] = lu.get_options_schema_definition(field)
         info = {
             "default_lookup": self.default_lookup,
