@@ -213,9 +213,11 @@ class FilterSet(metaclass=FilterSetType):
         return q
 
     def make_context(self, filter, queryset=None) -> dict[str, Any]:
+        if queryset is None:
+            queryset = self.get_default_queryset()
         return {
             'filterset': self,
-            'queryset': queryset or self.get_default_queryset(),
+            'queryset': queryset,
             'filter': filter,
         }
 
