@@ -266,20 +266,24 @@ class Filter:
         return field
 
     def get_options_schema_info(self, context: dict[str, Any]):
+        info = {
+            "default_lookup": self.default_lookup,
+            "label": self.label
+        }
+
         lookups = {}
         for lu in self.lookups:
             field = self._resolve_field(context, lu)
             lookups[lu.name] = lu.get_options_schema_definition(field)
-        info = {
-            "default_lookup": self.default_lookup,
-            "lookups": lookups,
-            "label": self.label
-        }
-        if hasattr(field, "help_text") and field.help_text:
-            info['help_text'] = field.help_text
+            info["lookups"] = lookups
+            if hasattr(field, "help_text") and field.help_text:
+                # Evaluate to string because it could be a lazy object.
+                info['help_text'] = str(field.help_text)
+
         if self.is_sticky:
             info['is_sticky'] = True
             info['sticky_default'] = deconstruct_query(self.get_sticky_Q(context))
+
         return info
 
     def get_lookup(self, name=None) -> Lookup:
