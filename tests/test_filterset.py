@@ -31,49 +31,14 @@ class TestFilterSetCreation:
     Testing the FilterSet meta class creation.
     """
 
-    @pytest.mark.skip(reason="The `__all__` feature has been disabled")
-    def test_derive_all_fields_and_lookups(self):
+    def test_missing_metadata(self):
         """
-        Using the ParticipantFilterSet with filters set to '__all__',
-        expect all fields and lookups to be valid for use.
+        Expect metadata exceptions to provide enough detail to find the problem class.
         """
+        with pytest.raises(ValueError, match="missing required metadata property"):
 
-        class ScopedFilterSet(FilterSet):
-            class Meta:
-                model = Participant
-                filters = '__all__'
-
-        filterset = ScopedFilterSet()
-        field_names = [f.name for f in Participant._meta.get_fields()]
-        # Cursor check for all fields
-        assert list(filterset.valid_filters.keys()) == field_names
-
-        # Check for all fields and all lookups
-        expected_filters = {
-            field.name: sorted(list(field.get_lookups().keys()))
-            for field in Participant._meta.get_fields()
-        }
-        assert filterset.valid_filters == expected_filters
-
-    @pytest.mark.skip(reason="Meta option for defining filters disabled")
-    def test_derive_scoped_fields_and_lookups(self):
-        """
-        Using a scoped filterset with filters set in the Meta class,
-        expect only those specified fields and lookups to be valid for use.
-        """
-        valid_filters = {
-            "age": ["gte", "lte"],
-            "sex": ["exact"],
-        }
-
-        class ScopedFilterSet(FilterSet):
-            class Meta:
-                model = Participant
-                filters = valid_filters
-
-        schema = ScopedFilterSet()
-        # Check for valid fields and lookups
-        assert schema.valid_filters == valid_filters
+            class TestMissingFilterSet(FilterSet):
+                pass
 
     def test_explicit_filter_definitions(self):
         """
@@ -109,7 +74,6 @@ class TestFilterSetCreation:
 
         filterset = TestFilterSet()
         assert get_filter_lookup_mapping(filterset) == valid_filters
-
 
     def test_subclassing_carries_defintions(self):
         """
@@ -155,15 +119,6 @@ class TestFilterSetCreation:
         filterset = ParticipantFilterSet()
         assert get_filter_lookup_mapping(filterset) == expected_filters
 
-    def test_metadata_exception_details(self):
-        """
-        Expect metadata exceptions to provide enough detail to find the problem class.
-        """
-        with pytest.raises(ValueError, match="missing required metadata property"):
-
-            class TestMissingFilterSet(FilterSet):
-                pass
-
     def test_with_non_existent_field(self):
         """
         Expect the creation of the FilterSet even though a filter for a non-existent field was defined.
@@ -183,6 +138,50 @@ class TestFilterSetCreation:
         # Check for the expected filters and lookups
         filterset = filterset_cls()
         assert get_filter_lookup_mapping(filterset) == expected_filters
+
+    @pytest.mark.skip(reason="The `__all__` feature has been disabled")
+    def test_derive_all_fields_and_lookups(self):
+        """
+        Using the ParticipantFilterSet with filters set to '__all__',
+        expect all fields and lookups to be valid for use.
+        """
+
+        class ScopedFilterSet(FilterSet):
+            class Meta:
+                model = Participant
+                filters = '__all__'
+
+        filterset = ScopedFilterSet()
+        field_names = [f.name for f in Participant._meta.get_fields()]
+        # Cursor check for all fields
+        assert list(filterset.valid_filters.keys()) == field_names
+
+        # Check for all fields and all lookups
+        expected_filters = {
+            field.name: sorted(list(field.get_lookups().keys()))
+            for field in Participant._meta.get_fields()
+        }
+        assert filterset.valid_filters == expected_filters
+
+    @pytest.mark.skip(reason="Meta option for defining filters disabled")
+    def test_derive_scoped_fields_and_lookups(self):
+        """
+        Using a scoped filterset with filters set in the Meta class,
+        expect only those specified fields and lookups to be valid for use.
+        """
+        valid_filters = {
+            "age": ["gte", "lte"],
+            "sex": ["exact"],
+        }
+
+        class ScopedFilterSet(FilterSet):
+            class Meta:
+                model = Participant
+                filters = valid_filters
+
+        schema = ScopedFilterSet()
+        # Check for valid fields and lookups
+        assert schema.valid_filters == valid_filters
 
 
 @pytest.mark.django_db
