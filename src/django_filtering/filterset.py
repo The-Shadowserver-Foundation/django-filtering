@@ -47,7 +47,7 @@ class Metadata:
             if len(self.parents) >= 1 and self.parents[0]._meta.model is not None:
                 self.model = self.parents[0]._meta.model
             else:
-                raise RequiredMetadataError("`model` is required.")
+                raise RequiredMetadataError('model')
         self.declared_filters = kwargs.get('_declared_filters', {})
         # TODO: Create filters from `filters` meta option
         self._filters = self.declared_filters
