@@ -159,12 +159,10 @@ class TestFilterSetCreation:
         """
         Expect metadata exceptions to provide enough detail to find the problem class.
         """
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError, match="missing required metadata property"):
 
             class TestMissingFilterSet(FilterSet):
                 pass
-
-        assert excinfo.match("TestMissingFilterSet errored")
 
     def test_with_non_existent_field(self):
         """
