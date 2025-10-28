@@ -1,16 +1,16 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from django.db.models import Q
 
 
 # An arugment to the Q class
-QArg = Tuple[str, Any]
-QueryDataVar = List[str | Dict[str, Any]]
+QArg = tuple[str, Any]
+QueryDataVar = list[str | dict[str, Any]]
 
 
 def construct_field_lookup_name(
     field_name: str,
-    lookup: Optional[str] = None,
+    lookup: str | None = None,
 ) -> str:
     """
     Given a field name and lookup, produce a valid argument query filter argument name.
@@ -21,8 +21,8 @@ def construct_field_lookup_name(
 
 def construct_field_lookup_arg(
     field_name: str,
-    value: Optional[Any] = None,
-    lookup: Optional[str] = None,
+    value: Any | None = None,
+    lookup: str | None = None,
 ) -> QArg:
     """
     Given a __query data__ structure make a field lookup value
