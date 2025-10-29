@@ -1,6 +1,7 @@
 from typing import Any
 
-from django.db.models import Q
+from django.db.models import Field, Q
+from django.utils.text import capfirst
 
 
 # An arugment to the Q class
@@ -60,3 +61,11 @@ def merge_dicts(*args):
         return merger
     else:
         return merge_dicts(merger, *args)
+
+
+def model_field_label(field: Field) -> str:
+    if field.is_relation:
+        label = field.related_model._meta.verbose_name
+    else:
+        label = field.verbose_name
+    return capfirst(label)

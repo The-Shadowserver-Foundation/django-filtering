@@ -1,13 +1,18 @@
-import warnings
 from functools import cached_property
-from typing import Any
+from typing import Any, Callable, Literal
 
 import jsonschema
 from django.conf import settings
-from django.db.models import Q, QuerySet
+from django.db.models import Field as ModelField, Q, QuerySet
+from django_filtering.utils import model_field_label
 
+from . import filters
 from .filters import Filter
 from .schema import JSONSchema, FilteringOptionsSchema
+
+
+ALL_FIELDS = "__all__"
+ALL_LOOKUPS = "__all__"
 
 
 class MetadataException(Exception):
@@ -20,6 +25,73 @@ class RequiredMetadataError(MetadataException):
     """
     Raised when a Meta class option is undefined and required.
     """
+
+
+def default_filter_factory(field: ModelField, **kwargs) -> filters.Filter:
+    lookups = kwargs.pop('lookups')
+    return filters.Filter(
+        *lookups,
+        **kwargs,
+    )
+
+def default_lookup_factory(lookup_name: str) -> filters.Lookup:
+    return filters.InputLookup(lookup_name, label=lookup_name)
+
+
+def filters_for_model(
+    model,
+    fields: dict[str, list[str]] | Literal[ALL_FIELDS] | None = None,
+    filter_factory_callback: Callable | None = None,
+    labels: dict[str, str] | None = None,
+) -> dict[str, Filter]:
+    """
+    Return a dictionary containing Filters for the given model.
+
+    ``fields`` is an optional dict of field names mapped to lookups.
+    If provided, return only the named fields.
+
+    ``filter_factory_callback`` is a callable that takes a model field and returns
+    a filter.
+
+    ``labels`` is a dictionary of model field names mapped to a label.
+
+    This method is modeled after ``django.forms.models:fields_for_model``.
+
+    """
+    field_dict = {}
+    opts = model._meta
+    all_fields = [f for f in opts.get_fields() if f not in opts.private_fields]
+
+    if not fields:
+        return field_dict
+    elif fields == ALL_FIELDS:
+        fields = {f.name: ALL_LOOKUPS for f in all_fields}
+
+    for field in all_fields:
+        if fields is not None and field.name not in fields:
+            continue
+
+        kwargs = {}
+
+        lookup_names = fields[field.name]
+        if lookup_names == ALL_LOOKUPS:
+            lookup_names = list(field.get_lookups().keys())
+        kwargs["lookups"] = [default_lookup_factory(lu) for lu in lookup_names]
+
+        if labels and field.name in labels:
+            kwargs["label"] = labels[field.name]
+        else:
+            kwargs["label"] = model_field_label(field)
+
+        if filter_factory_callback is None:
+            filter = default_filter_factory(field, **kwargs)
+        elif not callable(formfield_callback):
+            raise TypeError("filter_factory_callback must be a function or callable")
+        else:
+            filter = filter_factory_callback(field, **kwargs)
+        field_dict[field.name] = filter
+
+    return field_dict
 
 
 class Metadata:

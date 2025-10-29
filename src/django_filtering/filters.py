@@ -30,6 +30,9 @@ class Lookup:
         self.name = name
         self.label = label
 
+    def __hash__(self):
+        return hash(self.type + self.name + self.label)
+
     def get_options_schema_definition(self, field=None):
         """Returns a dict for use by the options schema."""
         return {
@@ -38,7 +41,8 @@ class Lookup:
         }
 
     def __repr__(self):
-        return f'<{self.__class__.__name__} name="{self.name}" type="{self.type}" label="{self.label}">'
+        cls_name = self.__class__.__name__
+        return f'<{cls_name} name="{self.name}" type="{self.type}" label="{self.label}">'
 
     def clean(self, value: Any):
         return value
@@ -87,6 +91,9 @@ class ChoiceLookup(SingleFieldLookup):
     def __init__(self, *args, choices=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._choices = choices
+
+    def __hash__(self):
+        return hash(str(super().__hash__()) + str(self._choices))
 
     def get_options_schema_definition(self, field=None):
         definition = super().get_options_schema_definition(field)
@@ -183,15 +190,24 @@ class Filter:
         self.solvent_value = solvent_value
 
     def __repr__(self):
-        sup_repr = super().__repr__()
-        repr_parts = sup_repr.split('object')
-        return ' '.join(
-            [
-                repr_parts[0],
-                f'name="{self.name}"',
-                f'label="{self.label}"',
-            ] + repr_parts[1:],
+        cls_name = self.__class__.__name__
+        lookup_names = ', '.join([lu.name for lu in self.lookups])
+        return f"<{cls_name} name=\"{self.name}\" label=\"{self.label}\" lookups=\"{lookup_names}\">"
+
+    def __hash__(self):
+        return hash(
+            ''.join([
+                ''.join([str(hash(lu)) for lu in self.lookups]),
+                self.default_lookup,
+                self.label,
+                str(self._transmuter),
+                str(self.sticky_value),
+                str(self.solvent_value),
+            ]),
         )
+
+    def __eq__(self, other: type['Filter']) -> bool:
+        return isinstance(other, self.__class__) and other.__hash__() == self.__hash__()
 
     @property
     def name(self):

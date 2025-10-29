@@ -17,6 +17,7 @@ def pytest_configure(config):
             "django_filtering",
             "tests.lab_app",
             "tests.market_app",
+            "tests.faux_app",
         ],
     )
 
