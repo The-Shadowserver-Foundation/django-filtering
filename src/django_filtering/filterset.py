@@ -68,7 +68,8 @@ def filters_for_model(
         fields = {f.name: ALL_LOOKUPS for f in all_fields}
 
     for field in all_fields:
-        if fields is not None and field.name not in fields:
+        name = field.name
+        if fields is not None and name not in fields:
             continue
 
         kwargs = {}
@@ -89,7 +90,8 @@ def filters_for_model(
             raise TypeError("filter_factory_callback must be a function or callable")
         else:
             filter = filter_factory_callback(field, **kwargs)
-        field_dict[field.name] = filter
+        filter = filter.bind(name)
+        field_dict[name] = filter
 
     return field_dict
 

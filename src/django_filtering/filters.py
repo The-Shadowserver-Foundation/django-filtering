@@ -163,7 +163,7 @@ class Filter:
     through the ``bind`` method.
 
     """
-    _name = None
+    _name: str | None = None
 
     def __init__(
         self,
@@ -203,6 +203,7 @@ class Filter:
                 str(self._transmuter),
                 str(self.sticky_value),
                 str(self.solvent_value),
+                self.name or '',
             ]),
         )
 

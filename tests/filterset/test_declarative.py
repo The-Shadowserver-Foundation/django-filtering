@@ -59,7 +59,7 @@ class TestFiltersForModel:
                 filters.InputLookup("regex", label="regex"),
                 filters.InputLookup("iregex", label="iregex"),
                 label="Content",
-            ),
+            ).bind('content'),
             'created_at': filters.Filter(
                 filters.InputLookup("exact", label="exact"),
                 filters.InputLookup("iexact", label="iexact"),
@@ -92,7 +92,7 @@ class TestFiltersForModel:
                 filters.InputLookup("date", label="date"),
                 filters.InputLookup("time", label="time"),
                 label="Created at"
-            ),
+            ).bind('created_at'),
             'id': filters.Filter(
                 filters.InputLookup("exact", label="exact"),
                 filters.InputLookup("iexact", label="iexact"),
@@ -112,7 +112,7 @@ class TestFiltersForModel:
                 filters.InputLookup("regex", label="regex"),
                 filters.InputLookup("iregex", label="iregex"),
                 label="ID",
-            ),
+            ).bind('id'),
         }
         assert sorted(filters_map.keys()) == sorted(expected.keys())
         for name, filter in filters_map.items():
@@ -180,27 +180,27 @@ class TestFiltersForModel:
             'id': filters.Filter(
                 *generally_expected_lookups,
                 label="ID",
-            ),
+            ).bind('id'),
             'name': filters.Filter(
                 *generally_expected_lookups,
                 label="Name",
-            ),
+            ).bind('name'),
             'clients': filters.Filter(
                 *generally_expected_lookups,
                 label="Manufacturer",
-            ),
+            ).bind('clients'),
             'suppliers': filters.Filter(
                 *generally_expected_lookups,
                 label="Manufacturer",
-            ),
+            ).bind('suppliers'),
             'supplies_given': filters.Filter(
                 *relationally_expected_lookups,
                 label="Supply",
-            ),
+            ).bind('supplies_given'),
             'supplies_received': filters.Filter(
                 *relationally_expected_lookups,
                 label="Supply",
-            ),
+            ).bind('supplies_received'),
         }
         assert sorted(filters_map.keys()) == sorted(expected.keys())
         for name, filter in filters_map.items():
