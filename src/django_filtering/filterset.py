@@ -122,9 +122,19 @@ class Metadata:
                 self.model = self.parents[0]._meta.model
             else:
                 raise RequiredMetadataError('model')
-        self.declared_filters = kwargs.get('_declared_filters', {})
-        # TODO: Create filters from `filters` meta option
-        self._filters = self.declared_filters
+
+        # Collect the filters.
+        self._filters = kwargs.get('_declared_filters', {})
+
+        self.fields = kwargs.get('fields', {})
+        if self.model:
+            # Generate the filters for meta declared fields and lookups.
+            field_filters = filters_for_model(self.model, fields=self.fields)
+            self._filters |= {
+                name: filter
+                for name, filter in field_filters.items()
+                if name not in self._filters
+            }
 
     @cached_property
     def filters(self) -> dict[str, Filter]:

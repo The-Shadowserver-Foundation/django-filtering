@@ -15,15 +15,7 @@ from tests.market_app.filters import (
     TopBrandKitchenProductFilterSet,
 )
 
-
-def get_filter_lookup_mapping(filterset: FilterSet) -> dict[str, list[str]]:
-    """
-    Returns a mapping of filter names to lookup names.
-    """
-    return {
-        filter.name: [lookup.name for lookup in filter.lookups]
-        for filter in filterset.filters
-    }
+from .utils import get_filter_lookup_mapping
 
 
 class TestFilterSetCreation:
@@ -118,70 +110,6 @@ class TestFilterSetCreation:
         # Check for the expected filters and lookups
         filterset = ParticipantFilterSet()
         assert get_filter_lookup_mapping(filterset) == expected_filters
-
-    def test_mixed_filters(self):
-        """
-        Tests the creation of a FilterSet with field and non-field filters.
-        """
-        filterset_cls = StudyFilterSet
-        expected_filters = {
-            "name": ["icontains"],
-            "continent": ["exact"],
-        }
-
-        # Expect resulting classes not to have Meta class attribute
-        assert not hasattr(filterset_cls, 'Meta')
-
-        # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
-        assert [name for name in filterset_cls._meta.filters] == list(expected_filters.keys())
-
-        # Check for the expected filters and lookups
-        filterset = filterset_cls()
-        assert get_filter_lookup_mapping(filterset) == expected_filters
-
-    @pytest.mark.skip(reason="The `__all__` feature has been disabled")
-    def test_derive_all_fields_and_lookups(self):
-        """
-        Define a FilterSet with fields metadata set to '__all__'.
-        Expect all fields and lookups to be valid for use.
-        """
-
-        class TestFilterSet(FilterSet):
-            class Meta:
-                model = Participant
-                fields = '__all__'
-
-        filterset = TestFilterSet()
-        field_names = [f.name for f in Participant._meta.get_fields()]
-        # Cursor check for all fields
-        assert list(filterset.valid_filters.keys()) == field_names
-
-        # Check for all fields and all lookups
-        expected_filters = {
-            field.name: sorted(list(field.get_lookups().keys()))
-            for field in Participant._meta.get_fields()
-        }
-        assert get_filter_lookup_mapping(filterset) == expected_filters
-
-    @pytest.mark.skip(reason="Meta option for defining filters disabled")
-    def test_derive_some_fields_and_lookups(self):
-        """
-        Define a FilterSet with some fields and lookups declared through metadata.
-        Expect only those specified fields and lookups to be valid for use.
-        """
-        valid_filters = {
-            "age": ["gte", "lte"],
-            "sex": ["exact"],
-        }
-
-        class TestFilterSet(FilterSet):
-            class Meta:
-                model = Participant
-                fields = valid_filters
-
-        filterset = TestFilterSet()
-        # Check for valid fields and lookups
-        assert get_filter_lookup_mapping(filterset) == valid_filters
 
 
 @pytest.mark.django_db

@@ -54,6 +54,17 @@ We'd start by creating a `FilterSet`.
         class Meta:
             model = Post
 
+This can also be expressed using the declarative style:
+
+    class PostFilterSet(filtering.FilterSet):
+        class Meta:
+            model = Post
+            fields = {
+                'title': ['icontains'],
+                'author': ['fullname__iexact', 'email__iexact'],
+                'content': ['icontains'],
+            }
+
 Note, this package does not come with an interface for user filtering.
 The `django-filtering-ui` package does provide an interface.
 
