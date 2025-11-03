@@ -4,6 +4,7 @@ from typing import Any
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, Model, Q
 
+from .conf import configurator
 from .utils import construct_field_lookup_arg, deconstruct_query
 
 
@@ -26,9 +27,9 @@ class Lookup:
     """
     type = None
 
-    def __init__(self, name: str, label: str):
+    def __init__(self, name: str, label: str | None = None):
         self.name = name
-        self.label = label
+        self.label = label if label is not None else configurator.get_lookup_label(name)
 
     def __hash__(self):
         return hash(self.type + self.name + self.label)

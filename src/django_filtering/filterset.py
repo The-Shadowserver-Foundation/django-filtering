@@ -35,7 +35,7 @@ def default_filter_factory(field: ModelField, **kwargs) -> filters.Filter:
     )
 
 def default_lookup_factory(lookup_name: str) -> filters.Lookup:
-    return filters.InputLookup(lookup_name, label=lookup_name)
+    return filters.InputLookup(lookup_name)
 
 
 def filters_for_model(
