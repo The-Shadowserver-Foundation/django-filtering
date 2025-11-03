@@ -1,5 +1,6 @@
 import json
 
+from django_filtering.conf import configurator
 import pytest
 from jsonschema.protocols import Validator
 from model_bakery import baker
@@ -298,7 +299,11 @@ class TestFilteringOptionsSchema:
             'name': {
                 'default_lookup': 'icontains',
                 'label': 'Name',
-                'lookups': {'icontains': {'label': 'contains', 'type': 'input'},
+                'lookups': {
+                    'icontains': {
+                        'label': configurator.get_lookup_label('icontains'),
+                        'type': 'input',
+                    },
                 },
             },
         }

@@ -7,22 +7,15 @@ from . import utils
 
 
 class ParticipantFilterSet(filtering.FilterSet):
-    name = filtering.Filter(
-        filtering.InputLookup('icontains', label='contains'),
-        default_lookup='icontains',
-        label="Name",
-    )
 
     class Meta:
         model = models.Participant
+        fields = {
+            'name': ['icontains'],
+        }
 
 
 class StudyFilterSet(filtering.FilterSet):
-    name = filtering.Filter(
-        filtering.InputLookup('icontains', label='contains'),
-        default_lookup='icontains',
-        label="Name",
-    )
     continent = filtering.Filter(
         filtering.ChoiceLookup(
             "exact",
@@ -38,3 +31,6 @@ class StudyFilterSet(filtering.FilterSet):
 
     class Meta:
         model = models.Study
+        fields = {
+            'name': ['icontains'],
+        }
