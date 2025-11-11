@@ -108,7 +108,7 @@ The JSON serialiable query data is a loosely lisp'ish data structure that looks 
     operator := 'and' | 'or' | 'not' | 'xor'
     filter := [<field-name>, {"lookup": <lookup>, "value": <value>}]
     field-name := string
-    lookup := string | array[string]
+    lookup := string
     value := any
 
 Note, the `value` can be of any JSON serialiable type.
