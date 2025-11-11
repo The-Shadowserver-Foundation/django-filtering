@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Callable, Literal
 
 import jsonschema
 from django.conf import settings
-from django.db.models import Field as ModelField, Q, QuerySet
+from django.db.models import Field as ModelField, Model, Q, QuerySet
+
 from django_filtering.utils import model_field_label
 
 from . import filters
@@ -96,6 +98,18 @@ def filters_for_model(
     return field_dict
 
 
+@dataclass
+class Options:
+    """
+    FilterSet.Meta options
+    This class is used to initialize ``FilterSet.Meta``
+    for the purpose of subclass inheritance.
+    """
+    abstract: bool = False
+    model: Model | None = None
+    fields: dict[str, list[str]] | None = None
+
+
 class Metadata:
     """
     FilterSet metadata
@@ -105,7 +119,7 @@ class Metadata:
     PUBLIC_KEYWORD_ARGS = (
         'abstract',
         'model',
-        'filters',
+        'fields',
     )
     PRIVATE_KEYWORD_ARGS = (
         '_parents',
@@ -136,6 +150,21 @@ class Metadata:
                 if name not in self._filters
             }
 
+    def contribute_to_class(self, cls):
+        """
+        Called by ``FilterSetType`` to allow this class to contribute to the type.
+        This loosely follows a metaclass paradigm used by Django.
+        """
+        cls.Meta = type(
+            'Meta',
+            (Options,),
+            dict(
+                abstract=self.is_abstract,
+                model=self.model,
+                fields=self.fields,
+            ),
+        )
+
     @cached_property
     def filters(self) -> dict[str, Filter]:
         filters = self._filters.copy()
@@ -165,6 +194,8 @@ class FilterSetType(type):
         if not bases:
             # Treat base FilterSet as abstract
             meta_opts['abstract'] = True
+        elif 'abstract' not in meta_opts:
+            meta_opts['abstract'] = False
         meta_opts['_parents'] =  [b for b in bases if isinstance(b, FilterSetType)]
 
         # Pull out filters from the class definition
@@ -184,8 +215,9 @@ class FilterSetType(type):
                     f"to a missing required metadata property: {exc.args[0]}"
                 )
 
-        # Create the new class
-        return super().__new__(mcs, name, bases, attrs)
+        cls = super().__new__(mcs, name, bases, attrs)
+        cls._meta.contribute_to_class(cls)
+        return cls
 
 
 class InvalidQueryData(Exception):

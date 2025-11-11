@@ -100,9 +100,23 @@ class TestFilterSetCreation:
             class Meta:
                 model = Participant
 
+        def get_meta_attrs(filterset_cls):
+            return {
+                attr: value
+                for attr, value in filterset_cls.Meta.__dict__.items()
+                if not attr.startswith('__')  # ignore dunder methods/attrs
+            }
+
         # Expect resulting classes not to have Meta class attribute
-        assert not hasattr(LabFilterSet, 'Meta')
-        assert not hasattr(ParticipantFilterSet, 'Meta')
+        assert hasattr(LabFilterSet, 'Meta')
+        assert get_meta_attrs(LabFilterSet) == {'abstract': True, 'fields': {}, 'model': None}
+        assert hasattr(ParticipantFilterSet, 'Meta')
+        expected_options = {
+            'abstract': False,
+            'model': Participant,
+            'fields': {}
+        }
+        assert get_meta_attrs(ParticipantFilterSet) == expected_options
 
         # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
         assert [name for name in ParticipantFilterSet._meta.filters] == ['age', 'name']
