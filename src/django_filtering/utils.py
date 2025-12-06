@@ -32,6 +32,25 @@ def construct_field_lookup_arg(
     return (construct_field_lookup_name(field_name, lookup=lookup), value)
 
 
+def deconstruct_field_lookup_arg(
+    field_lookup: str,
+    value: Any,
+    lookup: str | list[str] | None = None,
+) -> QueryDataVar:
+    """
+    Given a field name with lookup value,
+    deconstruct it into a __query data__ structure.
+    """
+    split_info = field_lookup.split("__", 1)
+    name = split_info.pop(0)
+    if len(split_info) == 0:
+        lookup = 'exact'
+    else:
+        lookup = split_info.pop()
+    opts = {'value': value, 'lookup': lookup}
+    return [name, opts]
+
+
 def deconstruct_query(
     query: Q,
 ) -> QueryDataVar:

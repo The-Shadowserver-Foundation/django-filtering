@@ -3,6 +3,7 @@ from typing import Any
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, Model, Q
+from django import forms
 
 from .conf import configurator
 from .utils import construct_field_lookup_arg, deconstruct_query
@@ -51,6 +52,9 @@ class Lookup:
     def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         raise NotImplementedError()
 
+    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+        raise NotImplementedError()
+
 
 class SingleFieldLookup(Lookup):
     """
@@ -75,6 +79,15 @@ class InputLookup(SingleFieldLookup):
     Represents an text input type field lookup.
     """
     type = 'input'
+
+    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+        field_kwargs = {
+            'required': False,
+            'label': f"{filter.label} {self.label}",
+        }
+        name = '__'.join([filter.name, self.name])
+        field = forms.CharField(**field_kwargs)
+        return {name: field}
 
 
 class ChoiceLookup(SingleFieldLookup):
@@ -119,6 +132,17 @@ class ChoiceLookup(SingleFieldLookup):
         definition['choices'] = choices
         return definition
 
+    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+        field_kwargs = {
+            'required': False,
+            'label': f"{filter.label} {self.label}",
+        }
+        name = '__'.join([filter.name, self.name])
+        if self._choices:
+            field_kwargs['choices'] = self._choices
+        field = forms.ChoiceField(**field_kwargs)
+        return {name: field}
+
 
 class DateRangeLookup(Lookup):
     """
@@ -146,6 +170,17 @@ class DateRangeLookup(Lookup):
                 'lte',
             )
         )
+
+    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+        gen_label = lambda classifier: f"{filter.label} {classifier}"
+        field_kwargs = {
+            'required': False,
+        }
+        base_name = '__'.join([filter.name, self.name])
+        return {
+            f'{base_name}__gte': forms.DateField(label=gen_label("greater than"), **field_kwargs),
+            f'{base_name}__lte': forms.DateField(label=gen_label("less than"), **field_kwargs),
+        }
 
 
 # A sentry value used to signal when the user has selected
@@ -341,3 +376,12 @@ class Filter:
         else:
             transmuter = self.get_lookup(lookup_name).transmute
         return transmuter(criteria, context=context)
+
+    def as_form_fields(self) -> dict[str, forms.Field]:
+        """
+        Produces form fields from this filter.
+        """
+        form_fields = {}
+        for lu in self.lookups:
+            form_fields.update(lu.as_form_fields(self))
+        return form_fields

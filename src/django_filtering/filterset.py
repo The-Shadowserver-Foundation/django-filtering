@@ -6,11 +6,10 @@ import jsonschema
 from django.conf import settings
 from django.db.models import Field as ModelField, Model, Q, QuerySet
 
-from django_filtering.utils import model_field_label
-
 from . import filters
 from .filters import Filter
 from .schema import JSONSchema, FilteringOptionsSchema
+from .utils import model_field_label
 
 
 ALL_FIELDS = "__all__"
@@ -252,7 +251,7 @@ class FilterSet(metaclass=FilterSetType):
     def filters(self) -> list[Filter]:
         return list(self._meta.filters.values())
 
-    def _get_filter(self, name: str) -> Filter:
+    def get_filter(self, name: str) -> Filter:
         """
         Get the filter object by name
         """
@@ -367,7 +366,7 @@ class FilterSet(metaclass=FilterSetType):
                 q = q._combine(q_child, connector)
             q.negated = is_negated
         else:
-            context = self.make_context(filter=self._get_filter(key), queryset=queryset)
+            context = self.make_context(filter=self.get_filter(key), queryset=queryset)
             q = self.call_transmuter(value, context)
             if q and (_is_root or is_negated):
                 q = Q.create(q.children, negated=is_negated)
