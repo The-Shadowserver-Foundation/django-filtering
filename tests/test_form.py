@@ -1,5 +1,6 @@
 from copy import deepcopy
 from django import forms
+from django.utils.datastructures import MultiValueDict
 
 from django_filtering.filters import (
     ChoiceLookup,
@@ -109,6 +110,7 @@ class TestFilterSetFormAdaptation:
             'continent__exact': f2_value,
         }
         assert form.initial == expected_initial
+        assert form.is_enabled
 
     def test_init_initial_from_filterset__with_sticky_filters(self):
         """
@@ -136,6 +138,7 @@ class TestFilterSetFormAdaptation:
             'brand__exact': filterset.get_filter('brand').sticky_value,
         }
         assert form.initial == expected_initial
+        assert form.is_enabled
 
     def test_disables_fields_for_multivalue(self):
         """
@@ -160,6 +163,7 @@ class TestFilterSetFormAdaptation:
         # because otherwise the target field would have multiple values assigned to it.
         expected_initial = {}
         assert form.initial == expected_initial
+        assert form.is_enabled
 
         # Expect the field to be disabled,
         # because it has multiple values assigned to it.
@@ -175,7 +179,7 @@ class TestFilterSetFormAdaptation:
         f1_value = 'Kitchen'
         f2_value = 'Bath'
         query_data = [
-            'or',
+            'and',
             [
                 ['category', {'lookup': 'exact', 'value': f1_value}],
                 ['category', {'lookup': 'exact', 'value': f2_value}],
@@ -190,6 +194,7 @@ class TestFilterSetFormAdaptation:
             'brand__exact': filterset.get_filter('brand').sticky_value,
         }
         assert form.initial == expected_initial
+        assert form.is_enabled
 
         # Expect the field to be disabled,
         # because it has multiple values assigned to it.
@@ -310,3 +315,85 @@ class TestFilterSetFormAdaptation:
         # and the form to have cleared the query data.
         expected_query_data = []
         assert filterset.query_data == expected_query_data
+
+    def try_using_disabled_form(self, form):
+        # Invoke validation; assuming enabled was ignored.
+        assert form.errors
+
+        # Expect the Form to have errors.
+        expected_error_message = [
+            "The form is disabled when nested filters "
+            "or non-'and' operations are used."
+        ]
+        assert form.errors['__all__'] == expected_error_message
+
+    def assert_form_is_disabled(self, form):
+        # Expect the form to know it is not enabled.
+        assert form.is_enabled == False
+
+        # Expect the initial values to be unset.
+        assert form.initial == {}
+
+        # Expect all form fields to be disabled
+        assert all([f.disabled for f in form.fields.values()])
+
+    def test_form_disabled__with_other_operators(self):
+        FilterSet, Form = self.make_em(StudyFilterSet)
+
+        f1_value = 'global warming'
+        f2_value = 'climate change'
+        query_data = [
+            'or',
+            [
+                ['name', {'lookup': 'icontains', 'value': f1_value}],
+                ['name', {'lookup': 'icontains', 'value': f2_value}],
+            ],
+        ]
+        data = MultiValueDict([
+            ('name__icontains', [f1_value, f2_value]),
+        ])
+        filterset = FilterSet(deepcopy(query_data))
+        form = Form(filterset, data)
+
+        self.assert_form_is_disabled(form)
+        self.try_using_disabled_form(form)
+
+    def test_form_disabled__with_nested_filters(self):
+        FilterSet, Form = self.make_em(StudyFilterSet)
+
+        f1_value = 'global warming'
+        f2_value = 'climate change'
+        query_data = [
+            'and',
+            [
+                [
+                    'or', [
+                        ['name', {'lookup': 'icontains', 'value': f1_value}],
+                        ['name', {'lookup': 'icontains', 'value': f2_value}]
+                    ]
+                ],
+                ['continent', {'lookup': 'exact', 'value': 'NA'}],
+            ],
+        ]
+        data = {}
+        filterset = FilterSet(deepcopy(query_data))
+        form = Form(filterset, data)
+
+        self.assert_form_is_disabled(form)
+        self.try_using_disabled_form(form)
+
+    def test_form_disabled__with_not_operator(self):
+        FilterSet, Form = self.make_em(StudyFilterSet)
+
+        query_data = [
+            'and',
+            [
+                ['not', ['continent', {'lookup': 'exact', 'value': 'NA'}]],
+            ],
+        ]
+        data = {}
+        filterset = FilterSet(deepcopy(query_data))
+        form = Form(filterset, data)
+
+        self.assert_form_is_disabled(form)
+        self.try_using_disabled_form(form)

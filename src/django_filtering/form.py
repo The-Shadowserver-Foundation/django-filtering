@@ -1,3 +1,5 @@
+from functools import cached_property
+
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
@@ -52,8 +54,64 @@ class FlatFilteringForm(forms.Form):
     def __init__(self, filterset: 'FilterSet', *args, **kwargs):
         self.filterset = filterset
         super().__init__(*args, **kwargs)
-        self._populate_initial_from_filterset()
-        self._disable_fields_for_multivalue_query_data()
+        if self.is_enabled:
+            self._populate_initial_from_filterset()
+            self._disable_fields_for_multivalue_query_data()
+
+    @property
+    def _filterset_has_query_data(self) -> bool:
+        """
+        Check whether the filterset has query data or an empty structure.
+        """
+        # FIXME There is a design issue around the 'empty' state of query data.
+        qd = self.filterset.query_data
+        if not qd:
+            return False
+        else:
+            if len(qd) == 2 and not qd[1]:
+                return False
+        return True
+
+    @cached_property
+    def is_enabled(self) -> bool:
+        """
+        Indicates when the form is enable or disabled.
+
+        Returns enabled (True) when the filterset's query data is empty
+
+        Returns enabled (True) when there is only one level of filters
+        using an 'and' connecting operator.
+        A form of filters without clear indication the connecting operator
+        is not intuitive.
+
+        Returns disabled (False) when the top level operator is not 'and'.
+
+        Return disabled (False) when the filterset contains nested query data.
+        In other words, the user has entered __advanced mode__
+        and a flat form interface will no longer accurately represent
+        the filtering strategy.
+
+        """
+        qd = self.filterset.query_data
+        nesting_operators = ('and', 'or', 'not',)
+        if not self._filterset_has_query_data:
+            return True
+
+        if (
+            # Disabled when the operator is anything other than 'and',
+            # because expected flat form usage expectation is typically ANDing.
+            qd[0] != 'and'
+            or
+            # Disabled when nested operators are present.
+            any([qc for qc in qd[1] if qc[0] in nesting_operators])
+        ):
+            for field in self.fields.values():
+                # Disable the field
+                field.disabled = True
+            self.initial = {}
+            return False
+
+        return True
 
     def __get_filter_by_field_name(self, field_name) -> Filter:
         filter_name, lookup_exp = field_name.split('__', 1)
@@ -128,6 +186,13 @@ class FlatFilteringForm(forms.Form):
             return field.widget.format_value(value)
 
     def clean(self):
+        if not self.is_enabled:
+            self.add_error(
+                None,
+                ("The form is disabled when nested filters "
+                 "or non-'and' operations are used."),
+            )
+
         # If necessary, initialize the query data structure.
         if len(self.filterset.query_data) == 0:
             # FIXME Initializing this structure, only to then maybe erase it
