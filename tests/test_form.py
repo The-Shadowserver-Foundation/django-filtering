@@ -53,8 +53,8 @@ class TestLookupToFormField:
 
 class TestFilterSetFormAdaptation:
 
-    def make_em(self, FilterSet):
-        return FilterSet, flat_filtering_form_factory(FilterSet)
+    def make_em(self, FilterSet, **kwargs):
+        return FilterSet, flat_filtering_form_factory(FilterSet, **kwargs)
 
     def test_blank(self):
         FilterSet, Form = self.make_em(StudyFilterSet)
@@ -397,3 +397,15 @@ class TestFilterSetFormAdaptation:
 
         self.assert_form_is_disabled(form)
         self.try_using_disabled_form(form)
+
+    def test_form_hidden_fields(self):
+        hidden_fields = ['continent__exact']
+        FilterSet, Form = self.make_em(StudyFilterSet, hidden_fields=hidden_fields)
+
+        # Expect the fields to be in the Form's Meta class
+        assert Form.Meta.hidden_fields == hidden_fields
+
+        filterset = FilterSet()
+        form = Form(filterset)
+
+        assert isinstance(form.fields['continent__exact'].widget, forms.HiddenInput)
