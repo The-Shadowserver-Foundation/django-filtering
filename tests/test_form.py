@@ -12,7 +12,7 @@ from django_filtering.filterset import FilterSet
 from django_filtering.form import flat_filtering_form_factory, FlatFilteringForm
 
 from tests.lab_app.filters import StudyFilterSet
-from tests.market_app.filters import TopBrandKitchenProductFilterSet
+from tests.market_app.filters import ProductFilterSet, TopBrandKitchenProductFilterSet
 
 
 class TestLookupToFormField:
@@ -402,10 +402,27 @@ class TestFilterSetFormAdaptation:
         hidden_fields = ['continent__exact']
         FilterSet, Form = self.make_em(StudyFilterSet, hidden_fields=hidden_fields)
 
-        # Expect the fields to be in the Form's Meta class
+        # Expect the fields to be in the Form's Meta class.
         assert Form.Meta.hidden_fields == hidden_fields
 
         filterset = FilterSet()
         form = Form(filterset)
 
         assert isinstance(form.fields['continent__exact'].widget, forms.HiddenInput)
+
+    def test_form_hidden_fields__with_wildcard(self):
+        hidden_fields = ['stocked_on*']
+        FilterSet, Form = self.make_em(ProductFilterSet, hidden_fields=hidden_fields)
+
+        # Expect the fields to be in the Form's Meta class.
+        assert Form.Meta.hidden_fields == hidden_fields
+
+        filterset = FilterSet()
+        form = Form(filterset)
+
+        # Expect all 'stocked_on' fields to be hidden.
+        assert all(
+            isinstance(form.fields[fn].widget, forms.HiddenInput)
+            for fn in form.fields
+            if fn.startswith('stocked_on')
+        )
