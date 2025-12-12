@@ -23,15 +23,18 @@ def filtering_form_factory(query_data_field_name='q', cls_base_name=''):
     )
 
 
-def flat_filtering_form_factory(FilterSet: type['FilterSet']):
+def flat_filtering_form_factory(FilterSet: type['FilterSet'], hidden_fields=[]):
     """
     Factory for creating a form
     that can be used with one level of nested query data.
+
+    The ``HiddenInput`` widget will be set on each field mentioned ``hidden_fields``.
+
     """
     form_attrs = {}
     for filter in FilterSet._meta.filters.values():
         form_attrs.update(filter.as_form_fields())
-    form_attrs['Meta'] = type('Meta', (), {'sticky_fields': []})
+    form_attrs['Meta'] = type('Meta', (), {'sticky_fields': [], 'hidden_fields': hidden_fields})
     for filter in FilterSet._meta.sticky_filters.values():
         _fields = filter.as_form_fields()
         form_attrs['Meta'].sticky_fields.extend(x for x in _fields)
@@ -54,6 +57,15 @@ class FlatFilteringForm(forms.Form):
     def __init__(self, filterset: 'FilterSet', *args, **kwargs):
         self.filterset = filterset
         super().__init__(*args, **kwargs)
+
+        # Hidden fields are active form fields,
+        # but they do not appear to the user.
+        if not hasattr(self.Meta, 'hidden_fields'):
+            self.Meta.hidden_fields = []
+        for field_name in self.Meta.hidden_fields:
+            self.fields[field_name].widget = forms.HiddenInput()
+
+        # Only initialize from the filterset when the form is enabled.
         if self.is_enabled:
             self._populate_initial_from_filterset()
             self._disable_fields_for_multivalue_query_data()
