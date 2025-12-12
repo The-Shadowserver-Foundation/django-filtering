@@ -1,3 +1,4 @@
+import fnmatch
 from functools import cached_property
 
 from django import forms
@@ -63,7 +64,12 @@ class FlatFilteringForm(forms.Form):
         if not hasattr(self.Meta, 'hidden_fields'):
             self.Meta.hidden_fields = []
         for field_name in self.Meta.hidden_fields:
-            self.fields[field_name].widget = forms.HiddenInput()
+            if '*' in field_name:  # Allow wildcard fieldname matching
+                field_names = fnmatch.filter(self.fields, field_name)
+            else:
+                field_names = [field_name]
+            for fn in field_names:
+                self.fields[fn].widget = forms.HiddenInput()
 
         # Only initialize from the filterset when the form is enabled.
         if self.is_enabled:
