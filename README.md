@@ -29,41 +29,43 @@ So there is no reason to add it to the Django project's `INSTALLED_APPS`.
 
 ## Usage
 
-Start by importing the package:
-
-    import django_filtering as filtering
-
 Say you have a `Post` model that you want users to be able to filter.
 We'd start by creating a `FilterSet`.
 
-    class PostFilterSet(filtering.FilterSet):
-        title = filtering.Filter(
-            filtering.InputLookup('icontains', label="contains"),
-            label="Title",
-        )
-        author = filtering.Filter(
-            filtering.InputLookup('fullname__iexact', label="fullname is"),
-            filtering.InputLookup('email__iexact', label="email is"),
-            label="Author",
-        )
-        content = filtering.Filter(
-            filtering.InputLookup('icontains', label="contains"),
-            label="Content",
-        )
+```python
+import django_filtering as filtering
 
-        class Meta:
-            model = Post
+class PostFilterSet(filtering.FilterSet):
+    title = filtering.Filter(
+        filtering.InputLookup('icontains', label="contains"),
+        label="Title",
+    )
+    author = filtering.Filter(
+        filtering.InputLookup('fullname__iexact', label="fullname is"),
+        filtering.InputLookup('email__iexact', label="email is"),
+        label="Author",
+    )
+    content = filtering.Filter(
+        filtering.InputLookup('icontains', label="contains"),
+        label="Content",
+    )
+
+    class Meta:
+        model = Post
+```
 
 This can also be expressed using the declarative style:
 
-    class PostFilterSet(filtering.FilterSet):
-        class Meta:
-            model = Post
-            fields = {
-                'title': ['icontains'],
-                'author': ['fullname__iexact', 'email__iexact'],
-                'content': ['icontains'],
-            }
+```python
+class PostFilterSet(filtering.FilterSet):
+    class Meta:
+        model = Post
+        fields = {
+            'title': ['icontains'],
+            'author': ['fullname__iexact', 'email__iexact'],
+            'content': ['icontains'],
+        }
+```
 
 Note, this package does not come with an interface for user filtering.
 The `django-filtering-ui` package does provide an interface.
@@ -71,14 +73,15 @@ The `django-filtering-ui` package does provide an interface.
 The filters can be posted in a Form. For example, we'll say we have a form
 that has a single `q` JSON field.
 
-    q = [
-      'and',
-        [
-          ['title', {'lookup': 'icontains', 'value': 'foo'}],
-          ['content', {'lookup': 'icontains', 'value': 'bar'},
-        ]
-      ]
+```python
+q = [
+    'and',
+    [
+        ['title', {'lookup': 'icontains', 'value': 'foo'}],
+        ['content', {'lookup': 'icontains', 'value': 'bar'}],
     ]
+]
+```
 
 The basic structure is an array with an operator and array of further criteria, where that can be a filter array or another operator grouping.
 
@@ -91,11 +94,13 @@ This query data structure is documented in more detail later in this document.
 
 Let's say this url is a listing view for `Post` objects, something that looks like:
 
-    def posts_list(request):
-        query_data = json.dumps(request.GET.get('q', '[]'))
-        filterset = PostFilterSet(query_data)
-        queryset = filterset.filter_queryset()
-        return HttpResponse('\n'.join([o.get_absolute_url() for o in queryset]))
+```python
+def posts_list(request):
+    query_data = json.loads(request.GET.get('q', '[]'))
+    filterset = PostFilterSet(query_data)
+    queryset = filterset.filter_queryset()
+    return HttpResponse('\n'.join([o.get_absolute_url() for o in queryset]))
+```
 
 In this example view we use the `PostFilterSet` with the query string value.
 We get the fitlered results by calling the `<FilterSet>.filter_queryset` method.
