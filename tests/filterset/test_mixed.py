@@ -27,7 +27,9 @@ class TestFilterSetCreation:
         assert not hasattr(filterset_cls, 'Meta')
 
         # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
-        assert [name for name in filterset_cls._meta.filters] == list(expected_filters.keys())
+        assert [name for name in filterset_cls._meta.filters] == list(
+            expected_filters.keys()
+        )
 
         # Check for the expected filters and lookups
         filterset = filterset_cls()

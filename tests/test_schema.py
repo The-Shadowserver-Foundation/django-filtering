@@ -1,14 +1,13 @@
 import json
 
-from django_filtering.conf import configurator
 import pytest
 from jsonschema.protocols import Validator
 from model_bakery import baker
 
 from django_filtering import filters
+from django_filtering.conf import configurator
 from django_filtering.filterset import FilterSet
 from django_filtering.schema import FilteringOptionsSchema, JSONSchema
-
 from tests.lab_app import models
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
 from tests.lab_app.utils import CONTINENT_CHOICES
@@ -51,7 +50,9 @@ class TestJsonSchema:
         Validator.check_schema(json_schema.schema)
 
         # Verify expected `$defs`, no more or less definitions
-        expected_defs = ['and-or-op', 'not-op', 'filters'] + [f"{n}-filter" for n in valid_filters]
+        expected_defs = ['and-or-op', 'not-op', 'filters'] + [
+            f"{n}-filter" for n in valid_filters
+        ]
         assert sorted(schema['$defs'].keys()) == sorted(expected_defs)
 
         # Verify filters defined in the `#/$defs/filters` container
@@ -68,10 +69,10 @@ class TestJsonSchema:
                     'type': 'object',
                     'properties': {
                         'lookup': {'enum': valid_filters['age']},
-                        'value': {'type': valid_value_types}
-                    }
-                }
-            ]
+                        'value': {'type': valid_value_types},
+                    },
+                },
+            ],
         }
         assert schema['$defs']['age-filter'] == expected_age_filter
         expected_sex_filter = {
@@ -82,10 +83,10 @@ class TestJsonSchema:
                     'type': 'object',
                     'properties': {
                         'lookup': {'enum': valid_filters['sex']},
-                        'value': {'type': valid_value_types}
-                    }
-                }
-            ]
+                        'value': {'type': valid_value_types},
+                    },
+                },
+            ],
         }
         assert schema['$defs']['sex-filter'] == expected_sex_filter
 
@@ -104,16 +105,30 @@ class TestFilteringOptionsSchema:
                 "gte": {"type": "input", "label": "greater than or equal to"},
                 "lte": {"type": "input", "label": "less than or equal to"},
             },
-            "sex": {"exact": {
-                "type": "choice",
-                "label": "matches",
-                "choices": [
-                    ('u', 'Unknown',),
-                    ('m', 'Male',),
-                    ('f', 'Female',),
-                    ('i', 'Intersex',),
-                ],
-            }},
+            "sex": {
+                "exact": {
+                    "type": "choice",
+                    "label": "matches",
+                    "choices": [
+                        (
+                            'u',
+                            'Unknown',
+                        ),
+                        (
+                            'm',
+                            'Male',
+                        ),
+                        (
+                            'f',
+                            'Female',
+                        ),
+                        (
+                            'i',
+                            'Intersex',
+                        ),
+                    ],
+                }
+            },
             "siblings": {
                 "name__icontains": {
                     "type": "input",
@@ -153,9 +168,17 @@ class TestFilteringOptionsSchema:
         assert sorted(schema.schema['filters'].keys()) == sorted(valid_filters.keys())
 
         # Check for filters
-        expected = {'default_lookup': list(valid_filters['age'].keys())[0], 'lookups': valid_filters['age'], 'label': 'Age'}
+        expected = {
+            'default_lookup': list(valid_filters['age'].keys())[0],
+            'lookups': valid_filters['age'],
+            'label': 'Age',
+        }
         assert schema.schema['filters']['age'] == expected
-        expected = {'default_lookup': list(valid_filters['sex'].keys())[0], 'lookups': valid_filters['sex'], 'label': 'Sex'}
+        expected = {
+            'default_lookup': list(valid_filters['sex'].keys())[0],
+            'lookups': valid_filters['sex'],
+            'label': 'Sex',
+        }
         assert schema.schema['filters']['sex'] == expected
 
     def test_generation_of_schema_w_sticky_filters(self):
@@ -190,7 +213,8 @@ class TestFilteringOptionsSchema:
                             ('Patio', 'Patio'),
                         ],
                         'label': 'equals',
-                        'type': 'choice'},
+                        'type': 'choice',
+                    },
                 },
                 'sticky_default': ['category', {'lookup': 'exact', 'value': 'Kitchen'}],
             },
@@ -209,7 +233,9 @@ class TestFilteringOptionsSchema:
         assert sorted(schema.schema['operators'].keys()) == sorted(expected)
 
         # Check for the valid FilterSet
-        assert sorted(schema.schema['filters'].keys()) == sorted(expected_filters.keys())
+        assert sorted(schema.schema['filters'].keys()) == sorted(
+            expected_filters.keys()
+        )
 
         # Check for filters
         assert schema.schema['filters']['name'] == expected_filters['name']
@@ -252,10 +278,16 @@ class TestFilteringOptionsSchema:
                     "exact": {
                         "type": "choice",
                         "label": "is",
-                        "choices": [(p.id, str(p),) for p in participants],
+                        "choices": [
+                            (
+                                p.id,
+                                str(p),
+                            )
+                            for p in participants
+                        ],
                     },
                 },
-            }
+            },
         }
 
         class TestFilterSet(FilterSet):
@@ -312,7 +344,9 @@ class TestFilteringOptionsSchema:
         schema = FilteringOptionsSchema(filterset)
 
         # Check for the valid FilterSet
-        assert sorted(schema.schema['filters'].keys()) == sorted(expected_filters.keys())
+        assert sorted(schema.schema['filters'].keys()) == sorted(
+            expected_filters.keys()
+        )
 
         # Check for filters
         assert schema.schema['filters']['name'] == expected_filters['name']

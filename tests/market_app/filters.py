@@ -29,7 +29,9 @@ class ProductFilterSet(filtering.FilterSet):
     )
 
     is_in_stock = filtering.Filter(
-        filtering.ChoiceLookup('exact', label=":", choices=[(True, "Yes"), (False, "No")]),
+        filtering.ChoiceLookup(
+            'exact', label=":", choices=[(True, "Yes"), (False, "No")]
+        ),
         label="Is in stock?",
     )
 
@@ -56,6 +58,7 @@ class KitchenProductFilterSet(filtering.FilterSet):
         sticky_value="Kitchen",
         label="Category",
     )
+
     class Meta:
         model = models.Product
 

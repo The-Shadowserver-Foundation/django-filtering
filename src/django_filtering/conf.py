@@ -68,7 +68,6 @@ settings = Settings()
 
 
 class Configurator:
-
     def get_lookup_label(self, lookup_name: str) -> str:
         return settings.LOOKUP_LABELS[lookup_name]
 

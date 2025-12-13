@@ -36,7 +36,9 @@ class TestInputLookup:
         criteria = {'value': 10, 'lookup': lookup_name}
 
         # Target
-        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(count__gte=10)
+        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(
+            count__gte=10
+        )
 
 
 class TestChoiceLookup:
@@ -72,7 +74,9 @@ class TestChoiceLookup:
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        target_field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
+        target_field = models.CharField(
+            name='type', choices=Type.choices, default=Type.MANUAL
+        )
         static_choices = [
             ('any', 'Any'),
             ('manual', 'Manual'),
@@ -98,7 +102,9 @@ class TestChoiceLookup:
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        target_field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
+        target_field = models.CharField(
+            name='type', choices=Type.choices, default=Type.MANUAL
+        )
         static_choices = [
             ('any', 'Any'),
             ('manual', 'Manual'),
@@ -128,12 +134,19 @@ class TestChoiceLookup:
         filter_name = 'count'
         filter = mock.Mock()
         filter.name = filter_name
-        choices = [(10, 'diez'), (25, 'veinticinco'), (50, 'cincuenta'), (100, 'ciento')]
+        choices = [
+            (10, 'diez'),
+            (25, 'veinticinco'),
+            (50, 'cincuenta'),
+            (100, 'ciento'),
+        ]
         lookup = filters.ChoiceLookup(lookup_name, label=label, choices=choices)
         criteria = {'value': 10, 'lookup': lookup_name}
 
         # Target
-        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(count__gte=10)
+        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(
+            count__gte=10
+        )
 
 
 class TestDateRangeLookup:
@@ -158,16 +171,26 @@ class TestDateRangeLookup:
         assert options_schema_blurb == expected
 
         # Check the cleaning of the values in the filter criteria
-        dirty_criteria = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
-        cleaned_criteria = {'value': [d1.isoformat(), d2.isoformat()], 'lookup': lookup_name}
+        dirty_criteria = {
+            'value': [d1.isoformat(), d2.isoformat()],
+            'lookup': lookup_name,
+        }
+        cleaned_criteria = {
+            'value': [d1.isoformat(), d2.isoformat()],
+            'lookup': lookup_name,
+        }
         assert lookup.clean(dirty_criteria) == cleaned_criteria
 
         # Check the transmutation of the criteria to Q instance.
-        expected = models.Q(**{
-            f'{filter.name}__gte': d1.isoformat(),
-            f'{filter.name}__lte': d2.isoformat(),
-        })
-        assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
+        expected = models.Q(
+            **{
+                f'{filter.name}__gte': d1.isoformat(),
+                f'{filter.name}__lte': d2.isoformat(),
+            }
+        )
+        assert (
+            lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
+        )
 
     @pytest.mark.skip(reason="not yet implemented")
     def test_validation(self):
@@ -183,9 +206,14 @@ class TestFilter:
 
     def test_init_wo_label(self):
         with pytest.raises(ValueError) as exc_info:
-            filters.Filter(filters.InputLookup('icontains', label='contains'), default_lookup='icontains')
+            filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                default_lookup='icontains',
+            )
         assert exc_info.type is ValueError
-        assert exc_info.value.args[0] == "At this time, the filter label must be provided."
+        assert (
+            exc_info.value.args[0] == "At this time, the filter label must be provided."
+        )
 
     def test_init_wo_default_lookup(self):
         # Target
@@ -261,7 +289,6 @@ class TestFilter:
             ],
         )
 
-
         # Target
         filter = filters.Filter(
             *[cls(*a, **kw) for cls, a, kw in lookups_data],
@@ -330,7 +357,9 @@ class TestFilter:
             return Q(something__in=['a', 'b', 'c'])
 
         filter = filters.Filter(
-            filters.ChoiceLookup('exact', label=":", choices=((True, 'Yes'), (False, 'No'))),
+            filters.ChoiceLookup(
+                'exact', label=":", choices=((True, 'Yes'), (False, 'No'))
+            ),
             label='Has something?',
             transmuter=assertion_transmuter,
         )
@@ -344,7 +373,6 @@ class TestFilter:
 
 
 class TestStickyFilter:
-
     def test(self):
         """
         This test case assumes usage in a FilterSet
@@ -378,7 +406,9 @@ class TestStickyFilter:
             'filter': filter,
             'queryset': None,  # not needed for this test
         }
-        assert filter.transmute(criteria, context=context) == models.Q(type__exact='bulk')
+        assert filter.transmute(criteria, context=context) == models.Q(
+            type__exact='bulk'
+        )
 
         # Ensure value does not translate to a Q argument
         criteria = {'lookup': 'exact', 'value': solvent_value}
@@ -390,14 +420,15 @@ class TestStickyFilter:
         assert filter.transmute(criteria, context=context) == None
 
         # Check the default Q argument
-        assert filter.get_sticky_Q(context=context) == models.Q(type__exact=sticky_value)
+        assert filter.get_sticky_Q(context=context) == models.Q(
+            type__exact=sticky_value
+        )
 
 
 @pytest.mark.django_db
 class TestFilterWithDBAccess:
-
     def test_get_options_schema_info__resolves_relational_field(self):
-        from .lab_app.models import Credential, Staff, Facility, Participant
+        from .lab_app.models import Credential, Facility, Participant, Staff
 
         # Create some content to ensure choices are filled in from data.
         cred1 = baker.make(Credential, name="PhD")
@@ -418,15 +449,31 @@ class TestFilterWithDBAccess:
             [filters.ChoiceLookup, ('max_occupancy',), {'label': 'is'}],
             # Testing relation within relation, where `participants` is a foreignkey field
             # Search for participants within a facility with participants of sex ___.
-            [filters.ChoiceLookup, ('participants__sex',), {'label': 'with participants of sex'}],
+            [
+                filters.ChoiceLookup,
+                ('participants__sex',),
+                {'label': 'with participants of sex'},
+            ],
             # Test relation within relation within relation,
             # where foreignkey to foreignkey to many-to-many fields are in use.
             # Search for participants within a facility managed by staff with credential ___.
-            [filters.ChoiceLookup, ('managed_by__credentials',), {'label': 'managed by staff with credential'}],
+            [
+                filters.ChoiceLookup,
+                ('managed_by__credentials',),
+                {'label': 'managed by staff with credential'},
+            ],
         )
         #: Additional information that is found in the to be tested schema
         lookup_supporting_info = (
-            {'choices': [(obj.pk, str(obj),) for obj in Facility.objects.all()]},
+            {
+                'choices': [
+                    (
+                        obj.pk,
+                        str(obj),
+                    )
+                    for obj in Facility.objects.all()
+                ]
+            },
             {},
             {'choices': Facility.OccupancySize.choices},
             {'choices': Participant.SexChoices.choices},

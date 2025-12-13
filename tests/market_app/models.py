@@ -2,7 +2,6 @@ from django.db import models
 
 
 class Product(models.Model):
-
     class Category(models.TextChoices):
         BATH = 'Bath', 'Bath'
         KITCHEN = 'Kitchen', 'Kitchen'

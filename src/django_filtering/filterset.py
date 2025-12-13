@@ -1,14 +1,16 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
 import jsonschema
 from django.conf import settings
-from django.db.models import Field as ModelField, Model, Q, QuerySet
+from django.db.models import Field as ModelField
+from django.db.models import Model, Q, QuerySet
 
 from . import filters
 from .filters import Filter
-from .schema import JSONSchema, FilteringOptionsSchema
+from .schema import FilteringOptionsSchema, JSONSchema
 from .utils import model_field_label
 
 
@@ -34,6 +36,7 @@ def default_filter_factory(field: ModelField, **kwargs) -> filters.Filter:
         *lookups,
         **kwargs,
     )
+
 
 def default_lookup_factory(lookup_name: str) -> filters.Lookup:
     return filters.InputLookup(lookup_name)
@@ -104,6 +107,7 @@ class Options:
     This class is used to initialize ``FilterSet.Meta``
     for the purpose of subclass inheritance.
     """
+
     abstract: bool = False
     model: Model | None = None
     fields: dict[str, list[str]] | None = None
@@ -129,7 +133,7 @@ class Metadata:
     def __init__(self, **kwargs):
         self.parents = kwargs['_parents']
         self.is_abstract = kwargs.get('abstract', False)
-        self.model = kwargs.get("model", None)
+        self.model = kwargs.get("model")
         if self.model is None and not self.is_abstract:
             if len(self.parents) >= 1 and self.parents[0]._meta.model is not None:
                 self.model = self.parents[0]._meta.model
@@ -188,14 +192,16 @@ class FilterSetType(type):
         if Meta is None:
             meta_opts = {}
         else:
-            meta_opts = {k: v for k, v in Meta.__dict__.items() if not k.startswith('_')}
+            meta_opts = {
+                k: v for k, v in Meta.__dict__.items() if not k.startswith('_')
+            }
 
         if not bases:
             # Treat base FilterSet as abstract
             meta_opts['abstract'] = True
         elif 'abstract' not in meta_opts:
             meta_opts['abstract'] = False
-        meta_opts['_parents'] =  [b for b in bases if isinstance(b, FilterSetType)]
+        meta_opts['_parents'] = [b for b in bases if isinstance(b, FilterSetType)]
 
         # Pull out filters from the class definition
         meta_opts['_declared_filters'] = {
@@ -316,10 +322,12 @@ class FilterSet(metaclass=FilterSetType):
         for err in validator.iter_errors(self.query_data):
             # TODO We can provide better detail than simply echoing
             #      the exception details. See jsonschema.exceptions.best_match.
-            self._errors.append({
-                'json_path': err.json_path,
-                'message': err.message,
-            })
+            self._errors.append(
+                {
+                    'json_path': err.json_path,
+                    'message': err.message,
+                }
+            )
 
     def get_query(self, queryset) -> Q | None:
         """Q object derived from query data. Only available after validation."""
@@ -337,10 +345,7 @@ class FilterSet(metaclass=FilterSetType):
         }
 
     def _transmute(
-        self,
-        query_data: None | list,
-        queryset: QuerySet,
-        _is_root: bool = True
+        self, query_data: None | list, queryset: QuerySet, _is_root: bool = True
     ) -> Q | None:
         """
         Transmute the given query data to a ``Q`` object.
@@ -362,7 +367,8 @@ class FilterSet(metaclass=FilterSetType):
             # Recurively build query tree
             for v in value:
                 q_child = self._transmute(v, queryset=queryset, _is_root=False)
-                if not q_child: continue
+                if not q_child:
+                    continue
                 q = q._combine(q_child, connector)
             q.negated = is_negated
         else:
@@ -372,7 +378,9 @@ class FilterSet(metaclass=FilterSetType):
                 q = Q.create(q.children, negated=is_negated)
         return q
 
-    def call_transmuter(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
+    def call_transmuter(
+        self, criteria: dict[str, Any], context: dict[str, Any]
+    ) -> Q | None:
         """
         Obtains the transmuter function given contextual information.
         Returns a callable that will transmute the context into a Q instance.

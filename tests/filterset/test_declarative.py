@@ -1,14 +1,11 @@
-import pytest
-
 from django.db import models
 
 from django_filtering import filters
 from django_filtering.filterset import (
     ALL_FIELDS,
-    filters_for_model,
     FilterSet,
+    filters_for_model,
 )
-
 from tests.lab_app.models import Participant
 
 from .utils import get_filter_lookup_mapping
@@ -18,7 +15,6 @@ class TestFiltersForModel:
     """Tests the ``filters_for_model`` function."""
 
     def test_no_fields(self):
-
         class Thing(models.Model):
             name = models.CharField(max_length=20)
 
@@ -96,7 +92,7 @@ class TestFiltersForModel:
                 filters.InputLookup("second"),
                 filters.InputLookup("date"),
                 filters.InputLookup("time"),
-                label="Created at"
+                label="Created at",
             ).bind('created_at'),
             'id': filters.Filter(
                 filters.InputLookup("exact"),
@@ -124,7 +120,6 @@ class TestFiltersForModel:
             assert filter == expected[name]
 
     def test_all_fields__with_many_to_many_fields(self):
-
         # Example models come from the Django ManyToMany field documentation
         # https://docs.djangoproject.com/en/5.2/ref/models/fields/#manytomanyfield
 

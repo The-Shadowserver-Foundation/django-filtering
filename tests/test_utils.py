@@ -12,6 +12,7 @@ def test_merge_dicts():
     expected = {'a': 1, 'b': 2, 'c': 3, 'x': 3, 'z': 4, 'y': 4}
     assert merge_dicts(*merging) == expected
 
+
 def test_merge_dicts__with_one_arg():
     expected = merging = [{'a': 1, 'z': 1}]
     expected = {'a': 1, 'z': 1}
@@ -26,7 +27,10 @@ def test_merge_dicts__with_no_args():
 
 def test_construct_field_lookup_arg():
     assert construct_field_lookup_arg('state', 'Complete') == ('state', 'Complete')
-    assert construct_field_lookup_arg('name', 'foo', 'icontains') == ('name__icontains', 'foo')
+    assert construct_field_lookup_arg('name', 'foo', 'icontains') == (
+        'name__icontains',
+        'foo',
+    )
 
 
 def test_deconstruct_field_lookup_arg():

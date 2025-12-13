@@ -35,7 +35,9 @@ def flat_filtering_form_factory(FilterSet: type['FilterSet'], hidden_fields=[]):
     form_attrs = {}
     for filter in FilterSet._meta.filters.values():
         form_attrs.update(filter.as_form_fields())
-    form_attrs['Meta'] = type('Meta', (), {'sticky_fields': [], 'hidden_fields': hidden_fields})
+    form_attrs['Meta'] = type(
+        'Meta', (), {'sticky_fields': [], 'hidden_fields': hidden_fields}
+    )
     for filter in FilterSet._meta.sticky_filters.values():
         _fields = filter.as_form_fields()
         form_attrs['Meta'].sticky_fields.extend(x for x in _fields)
@@ -111,7 +113,11 @@ class FlatFilteringForm(forms.Form):
 
         """
         qd = self.filterset.query_data
-        nesting_operators = ('and', 'or', 'not',)
+        nesting_operators = (
+            'and',
+            'or',
+            'not',
+        )
         if not self._filterset_has_query_data:
             return True
 
@@ -150,7 +156,9 @@ class FlatFilteringForm(forms.Form):
                 self.initial[field_name] = value
 
             # Reverse sticky filters using the sticky fields
-            condition_field_names = [self.__get_field_name_and_value(x)[0] for x in conditions]
+            condition_field_names = [
+                self.__get_field_name_and_value(x)[0] for x in conditions
+            ]
             for field_name in self.Meta.sticky_fields:
                 if field_name not in condition_field_names:
                     filter = self.__get_filter_by_field_name(field_name)
@@ -170,7 +178,9 @@ class FlatFilteringForm(forms.Form):
 
         # Disable fields that have more than one use in the query data.
         # This is done because the UI can't currently handle more than one value in the form input.
-        fields_to_disable = [field for field in use_counts if len(use_counts.getlist(field)) >= 2]
+        fields_to_disable = [
+            field for field in use_counts if len(use_counts.getlist(field)) >= 2
+        ]
         for field_name in fields_to_disable:
             field = self.fields[field_name]
             # Disable the field
@@ -207,8 +217,10 @@ class FlatFilteringForm(forms.Form):
         if not self.is_enabled:
             self.add_error(
                 None,
-                ("The form is disabled when nested filters "
-                 "or non-'and' operations are used."),
+                (
+                    "The form is disabled when nested filters "
+                    "or non-'and' operations are used."
+                ),
             )
 
         # If necessary, initialize the query data structure.
@@ -223,19 +235,23 @@ class FlatFilteringForm(forms.Form):
                 continue
 
             conditions = self.filterset.query_data[1]
-            condition_field_names = [self.__get_field_name_and_value(x)[0] for x in conditions]
+            condition_field_names = [
+                self.__get_field_name_and_value(x)[0] for x in conditions
+            ]
 
             is_dropped_field = (
                 field_name in condition_field_names
-                and
-                self.cleaned_data[field_name] in self.fields[field_name].empty_values
+                and self.cleaned_data[field_name]
+                in self.fields[field_name].empty_values
             )
             is_sticky_field_with_default_value = (
                 field_name in self.Meta.sticky_fields
                 and field_name in condition_field_names
             )
             if is_dropped_field or is_sticky_field_with_default_value:
-                del self.filterset.query_data[1][condition_field_names.index(field_name)]
+                del self.filterset.query_data[1][
+                    condition_field_names.index(field_name)
+                ]
                 continue
 
             # Reformat the value to base string form for query data usage.

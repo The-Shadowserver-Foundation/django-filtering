@@ -23,7 +23,6 @@ class Staff(models.Model):
 
 
 class Facility(models.Model):
-
     class OccupancySize(models.IntegerChoices):
         SMALL = 20
         MEDIUM = 40
@@ -50,7 +49,6 @@ class Facility(models.Model):
 
 
 class Participant(models.Model):
-
     class SexChoices(models.TextChoices):
         UNKNOWN = "u", "Unknown"
         MALE = "m", "Male"
@@ -63,7 +61,9 @@ class Participant(models.Model):
     age = models.IntegerField()
     sex = models.CharField(max_length=1, choices=SexChoices, default=SexChoices.UNKNOWN)
     is_paid = models.BooleanField()
-    payment_amount = models.DecimalField(blank=True, null=True, max_digits=5, decimal_places=2)
+    payment_amount = models.DecimalField(
+        blank=True, null=True, max_digits=5, decimal_places=2
+    )
     facility = models.ForeignKey(
         Facility,
         blank=True,
@@ -80,7 +80,6 @@ class Participant(models.Model):
 
 
 class Study(models.Model):
-
     class State(models.IntegerChoices):
         DRAFT = 0, "Drafting"
         CANCEL = 10, "Cancelled"

@@ -27,21 +27,21 @@ class FilteringOptionsSchema:
         }
 
     def __str__(self):
-            return json.dumps(self.schema)
+        return json.dumps(self.schema)
 
 
 BASE_DEFINITIONS = {
     "and-or-op": {
         "type": "array",
         "prefixItems": [
-            { "enum": ["and", "or"] },
+            {"enum": ["and", "or"]},
             {
                 "type": "array",
                 "items": {
                     "anyOf": [
-                        { "$ref": "#/$defs/filters" },
-                        { "$ref": "#/$defs/and-or-op" },
-                        { "$ref": "#/$defs/not-op" },
+                        {"$ref": "#/$defs/filters"},
+                        {"$ref": "#/$defs/and-or-op"},
+                        {"$ref": "#/$defs/not-op"},
                     ],
                 },
             },
@@ -50,12 +50,12 @@ BASE_DEFINITIONS = {
     "not-op": {
         "type": "array",
         "prefixItems": [
-            { "const": "not" },
+            {"const": "not"},
             {
                 "oneOf": [
-                    { "$ref": "#/$defs/filters" },
-                    { "$ref": "#/$defs/and-or-op" },
-                    { "$ref": "#/$defs/not-op" },
+                    {"$ref": "#/$defs/filters"},
+                    {"$ref": "#/$defs/and-or-op"},
+                    {"$ref": "#/$defs/not-op"},
                 ]
             },
         ],
@@ -86,7 +86,16 @@ class JSONSchema:
                         "properties": {
                             "lookup": {"enum": [l.name for l in filter.lookups]},
                             # TODO Restrict value types to desired input type.
-                            "value": {"type": ["string", "number", "object", "array", "boolean", "null"]},
+                            "value": {
+                                "type": [
+                                    "string",
+                                    "number",
+                                    "object",
+                                    "array",
+                                    "boolean",
+                                    "null",
+                                ]
+                            },
                         },
                     },
                 ],

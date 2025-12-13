@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 from django.shortcuts import render, reverse
 from django_filtering.form import (
     flat_filtering_form_factory,
-    
+
 )
 
 from .filters import PostFilterSet

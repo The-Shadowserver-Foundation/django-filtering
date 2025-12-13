@@ -1,14 +1,12 @@
 import pytest
-
 from django.db.models.query_utils import Q
 from model_bakery import baker
 from pytest_django import asserts
 
 from django_filtering import filters
 from django_filtering.filterset import FilterSet, InvalidFilterSet
-
-from tests.lab_app.models import Participant, Study
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
+from tests.lab_app.models import Participant
 from tests.market_app.filters import (
     KitchenProductFilterSet,
     ProductFilterSet,
@@ -109,13 +107,13 @@ class TestFilterSetCreation:
 
         # Expect resulting classes not to have Meta class attribute
         assert hasattr(LabFilterSet, 'Meta')
-        assert get_meta_attrs(LabFilterSet) == {'abstract': True, 'fields': {}, 'model': None}
-        assert hasattr(ParticipantFilterSet, 'Meta')
-        expected_options = {
-            'abstract': False,
-            'model': Participant,
-            'fields': {}
+        assert get_meta_attrs(LabFilterSet) == {
+            'abstract': True,
+            'fields': {},
+            'model': None,
         }
+        assert hasattr(ParticipantFilterSet, 'Meta')
+        expected_options = {'abstract': False, 'model': Participant, 'fields': {}}
         assert get_meta_attrs(ParticipantFilterSet) == expected_options
 
         # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
@@ -225,7 +223,10 @@ class TestFilterSetTransmutesQueryData:
                     "and",
                     (
                         ("name", {"lookup": "icontains", "value": "oven"}),
-                        ("not", ("name", {"lookup": "icontains", "value": "microwave"})),
+                        (
+                            "not",
+                            ("name", {"lookup": "icontains", "value": "microwave"}),
+                        ),
                     ),
                 ),
             ),
@@ -251,7 +252,13 @@ class TestFilterSetTransmutesQueryData:
                             (
                                 ("name", {"lookup": "icontains", "value": "soap"}),
                                 ("name", {"lookup": "icontains", "value": "hand"}),
-                                ("not", ("name", {"lookup": "icontains", "value": "lotion"})),
+                                (
+                                    "not",
+                                    (
+                                        "name",
+                                        {"lookup": "icontains", "value": "lotion"},
+                                    ),
+                                ),
                             ),
                         ),
                         # Note, the missing 'lookup' value, to test default lookup
@@ -302,7 +309,9 @@ class TestFilterSetTransmutesQueryData:
         filterset.validate()
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be added to the query
-        expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
+        expected = Q(("category__exact", "Kitchen")) & Q(
+            ("name__icontains", "sink"), _connector=Q.AND
+        )
         assert q == expected
 
     def test_sticky_filter__default_in_query_data(self):
@@ -321,7 +330,9 @@ class TestFilterSetTransmutesQueryData:
         filterset.validate()
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be present
-        expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
+        expected = Q(("category__exact", "Kitchen")) & Q(
+            ("name__icontains", "sink"), _connector=Q.AND
+        )
         assert q == expected
 
     def test_sticky_filter__overridden_in_query_data(self):
@@ -340,7 +351,9 @@ class TestFilterSetTransmutesQueryData:
         filterset.validate()
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be present
-        expected = Q(("category__exact", "Bath")) & Q(("name__icontains", "sink"), _connector=Q.AND)
+        expected = Q(("category__exact", "Bath")) & Q(
+            ("name__icontains", "sink"), _connector=Q.AND
+        )
         assert q == expected
 
     def test_sticky_filter__unstick_value_in_query_data(self):
@@ -351,7 +364,9 @@ class TestFilterSetTransmutesQueryData:
         This test case essentially tests for the removal
         of the sticky filter from the overall query.
         """
-        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters['category'].solvent_value
+        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters[
+            'category'
+        ].solvent_value
         data = [
             "and",
             [
@@ -440,8 +455,12 @@ class TestFilterSetTransmutesQueryData:
         assert q == expected
 
     def test_several_sticky_filters__unstick_value_in_query_data(self):
-        category_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('category').solvent_value
-        brand_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('brand').solvent_value
+        category_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter(
+            'category'
+        ).solvent_value
+        brand_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter(
+            'brand'
+        ).solvent_value
         data = [
             "and",
             [
@@ -483,6 +502,7 @@ class TestFilterSetTransmutesQueryData:
             _connector=Q.AND,
         )
         assert q == expected
+
 
 class TestFilterSetQueryData:
     """
@@ -538,7 +558,7 @@ class TestFilterSetQueryData:
         expected_errors = [
             {
                 'json_path': '$[1][0]',
-                'message': "['title', {'lookup': 'icontains', 'value': 'miss'}] is not valid under any of the given schemas"
+                'message': "['title', {'lookup': 'icontains', 'value': 'miss'}] is not valid under any of the given schemas",
             },
         ]
         assert filterset.errors == expected_errors
@@ -558,7 +578,7 @@ class TestFilterSetQueryData:
         expected_errors = [
             {
                 'json_path': '$[1][0]',
-                'message': "['name', {'lookup': 'irandom', 'value': '10'}] is not valid under any of the given schemas"
+                'message': "['name', {'lookup': 'irandom', 'value': '10'}] is not valid under any of the given schemas",
             },
         ]
         assert filterset.errors == expected_errors
@@ -610,7 +630,5 @@ class TestFilterSetQueryData:
         q = filterset._transmute(filterset.query_data, queryset=None)
 
         assert filterset.is_valid, filterset.errors
-        expected = (
-            Q(quantity__gt=0)
-        )
+        expected = Q(quantity__gt=0)
         assert q == expected

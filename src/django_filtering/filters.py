@@ -1,9 +1,9 @@
 from copy import deepcopy
 from typing import Any
 
+from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, Model, Q
-from django import forms
 
 from .conf import configurator
 from .utils import construct_field_lookup_arg, deconstruct_query
@@ -26,6 +26,7 @@ class Lookup:
     This may be used by the frontend implemenation to display
     the lookup's relationship to a field.
     """
+
     type = None
 
     def __init__(self, name: str, label: str | None = None):
@@ -44,7 +45,9 @@ class Lookup:
 
     def __repr__(self):
         cls_name = self.__class__.__name__
-        return f'<{cls_name} name="{self.name}" type="{self.type}" label="{self.label}">'
+        return (
+            f'<{cls_name} name="{self.name}" type="{self.type}" label="{self.label}">'
+        )
 
     def clean(self, value: Any):
         return value
@@ -67,17 +70,20 @@ class SingleFieldLookup(Lookup):
         Produces a ``Q`` object from the query data criteria using the known information.
         """
         filter = context['filter']
-        return Q(construct_field_lookup_arg(
-            filter.name,
-            criteria['value'],
-            criteria['lookup'],
-        ))
+        return Q(
+            construct_field_lookup_arg(
+                filter.name,
+                criteria['value'],
+                criteria['lookup'],
+            )
+        )
 
 
 class InputLookup(SingleFieldLookup):
     """
     Represents an text input type field lookup.
     """
+
     type = 'input'
 
     def as_form_fields(self, filter) -> dict[str, forms.Field]:
@@ -100,6 +106,7 @@ class ChoiceLookup(SingleFieldLookup):
     or a function that returns a list of choices.
 
     """
+
     type = 'choice'
 
     def __init__(self, *args, choices=None, **kwargs):
@@ -149,6 +156,7 @@ class DateRangeLookup(Lookup):
     Represents inputs for querying between a date range.
 
     """
+
     type = 'date-range'
 
     # At this time there is no reason to _clean_ the value
@@ -168,7 +176,7 @@ class DateRangeLookup(Lookup):
                 filter.name,
                 criteria['value'][1],
                 'lte',
-            )
+            ),
         )
 
     def as_form_fields(self, filter) -> dict[str, forms.Field]:
@@ -178,8 +186,12 @@ class DateRangeLookup(Lookup):
         }
         base_name = '__'.join([filter.name, self.name])
         return {
-            f'{base_name}__gte': forms.DateField(label=gen_label("greater than"), **field_kwargs),
-            f'{base_name}__lte': forms.DateField(label=gen_label("less than"), **field_kwargs),
+            f'{base_name}__gte': forms.DateField(
+                label=gen_label("greater than"), **field_kwargs
+            ),
+            f'{base_name}__lte': forms.DateField(
+                label=gen_label("less than"), **field_kwargs
+            ),
         }
 
 
@@ -199,6 +211,7 @@ class Filter:
     through the ``bind`` method.
 
     """
+
     _name: str | None = None
 
     def __init__(
@@ -213,7 +226,9 @@ class Filter:
         self.lookups = lookups
         # Ensure at least one lookup has been defined.
         if len(self.lookups) == 0:
-            raise ValueError("Must specify at least one lookup for the filter (e.g. InputLookup).")
+            raise ValueError(
+                "Must specify at least one lookup for the filter (e.g. InputLookup)."
+            )
         # Assign the default lookup to use or default to the first defined lookup.
         self.default_lookup = default_lookup if default_lookup else self.lookups[0].name
         if label is None:
@@ -232,15 +247,17 @@ class Filter:
 
     def __hash__(self):
         return hash(
-            ''.join([
-                ''.join([str(hash(lu)) for lu in self.lookups]),
-                self.default_lookup,
-                self.label,
-                str(self._transmuter),
-                str(self.sticky_value),
-                str(self.solvent_value),
-                self.name or '',
-            ]),
+            ''.join(
+                [
+                    ''.join([str(hash(lu)) for lu in self.lookups]),
+                    self.default_lookup,
+                    self.label,
+                    str(self._transmuter),
+                    str(self.sticky_value),
+                    str(self.solvent_value),
+                    self.name or '',
+                ]
+            ),
         )
 
     def __eq__(self, other: type['Filter']) -> bool:
@@ -319,10 +336,7 @@ class Filter:
         return field
 
     def get_options_schema_info(self, context: dict[str, Any]):
-        info = {
-            "default_lookup": self.default_lookup,
-            "label": self.label
-        }
+        info = {"default_lookup": self.default_lookup, "label": self.label}
 
         lookups = {}
         for lu in self.lookups:
@@ -352,7 +366,9 @@ class Filter:
         cleaned = criteria.copy()
 
         # Defer to the lookup instance for cleaning specifics
-        cleaned['value'] = self.get_lookup(criteria.get('lookup')).clean(criteria['value'])
+        cleaned['value'] = self.get_lookup(criteria.get('lookup')).clean(
+            criteria['value']
+        )
 
         # Check if the cleaned value is the solvent that removes the sticky filter.
         if cleaned['value'] == self.solvent_value:

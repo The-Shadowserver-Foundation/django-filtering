@@ -2,12 +2,10 @@ from django.db.models import Q
 
 import django_filtering as filtering
 
-from . import models
-from . import utils
+from . import models, utils
 
 
 class ParticipantFilterSet(filtering.FilterSet):
-
     class Meta:
         model = models.Participant
         fields = {

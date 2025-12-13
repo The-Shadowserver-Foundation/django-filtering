@@ -39,3 +39,34 @@ only-packages = true
 [tool.pytest.ini_options]
 pythonpath = [".", "src"]
 addopts = "-vv --pdbcls=IPython.terminal.debugger:TerminalPdb"
+
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.format]
+# Allow whatever quoting makes sense for the situation.
+quote-style = "preserve"
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # mccabe
+    "C",
+]
+ignore = [ "F403" ]
+
+[tool.ruff.lint.isort]
+# Use a double line break after each import block.
+lines-after-imports = 2

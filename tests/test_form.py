@@ -1,4 +1,5 @@
 from copy import deepcopy
+
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
@@ -8,15 +9,12 @@ from django_filtering.filters import (
     Filter,
     InputLookup,
 )
-from django_filtering.filterset import FilterSet
-from django_filtering.form import flat_filtering_form_factory, FlatFilteringForm
-
+from django_filtering.form import flat_filtering_form_factory
 from tests.lab_app.filters import StudyFilterSet
 from tests.market_app.filters import ProductFilterSet, TopBrandKitchenProductFilterSet
 
 
 class TestLookupToFormField:
-
     def test_InputLookup(self):
         lookup = InputLookup("iexact", label="is")
         filter = Filter(lookup, label="Name")
@@ -52,7 +50,6 @@ class TestLookupToFormField:
 
 
 class TestFilterSetFormAdaptation:
-
     def make_em(self, FilterSet, **kwargs):
         return FilterSet, flat_filtering_form_factory(FilterSet, **kwargs)
 
@@ -226,7 +223,9 @@ class TestFilterSetFormAdaptation:
 
         # Expect a condition to have been added to the query data.
         expected_query_data = deepcopy(query_data)
-        expected_query_data[1].append(['continent', {'lookup': 'exact', 'value': f2_value}])
+        expected_query_data[1].append(
+            ['continent', {'lookup': 'exact', 'value': f2_value}]
+        )
         assert filterset.query_data == expected_query_data
 
     def test_form_updates_filterset(self):
@@ -322,8 +321,7 @@ class TestFilterSetFormAdaptation:
 
         # Expect the Form to have errors.
         expected_error_message = [
-            "The form is disabled when nested filters "
-            "or non-'and' operations are used."
+            "The form is disabled when nested filters or non-'and' operations are used."
         ]
         assert form.errors['__all__'] == expected_error_message
 
@@ -349,9 +347,11 @@ class TestFilterSetFormAdaptation:
                 ['name', {'lookup': 'icontains', 'value': f2_value}],
             ],
         ]
-        data = MultiValueDict([
-            ('name__icontains', [f1_value, f2_value]),
-        ])
+        data = MultiValueDict(
+            [
+                ('name__icontains', [f1_value, f2_value]),
+            ]
+        )
         filterset = FilterSet(deepcopy(query_data))
         form = Form(filterset, data)
 
@@ -367,10 +367,11 @@ class TestFilterSetFormAdaptation:
             'and',
             [
                 [
-                    'or', [
+                    'or',
+                    [
                         ['name', {'lookup': 'icontains', 'value': f1_value}],
-                        ['name', {'lookup': 'icontains', 'value': f2_value}]
-                    ]
+                        ['name', {'lookup': 'icontains', 'value': f2_value}],
+                    ],
                 ],
                 ['continent', {'lookup': 'exact', 'value': 'NA'}],
             ],

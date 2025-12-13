@@ -13,6 +13,7 @@ CONTINENT_COUNTRIES_MAP = {
     'NA': ['CAN', 'MEX', 'USA', 'BMU', 'GRL']
 }
 
+
 def continent_to_countries(value) -> list[str]:
     if value != 'NA':
         raise Exception("Testing scope is limited to the 'NA' choice.")
