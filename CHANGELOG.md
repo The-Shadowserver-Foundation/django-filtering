@@ -1,4 +1,4 @@
-## Unreleased
+## 0.3.1 - 2025-Dec-15
 
 - Added: Wrote a changelog to keep track of release history.
 - Changed: Correct various linting errors caught by ruff.
