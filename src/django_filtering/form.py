@@ -34,12 +34,12 @@ def flat_filtering_form_factory(FilterSet: type['FilterSet'], hidden_fields=[]):
     """
     form_attrs = {}
     for filter in FilterSet._meta.filters.values():
-        form_attrs.update(filter.as_form_fields())
+        form_attrs.update(filter.as_form_fields(FilterSet))
     form_attrs['Meta'] = type(
         'Meta', (), {'sticky_fields': [], 'hidden_fields': hidden_fields}
     )
     for filter in FilterSet._meta.sticky_filters.values():
-        _fields = filter.as_form_fields()
+        _fields = filter.as_form_fields(FilterSet)
         form_attrs['Meta'].sticky_fields.extend(x for x in _fields)
         form_attrs.update(_fields)
     return type(

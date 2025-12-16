@@ -20,28 +20,61 @@ class TestLookupToFormField:
         filter = Filter(lookup, label="Name")
         filter = filter.bind("name")
 
-        form_fields = filter.as_form_fields()
+        filterset = None  # Unused in this test
+        form_fields = filter.as_form_fields(filterset)
         assert len(form_fields) == 1
         assert isinstance(form_fields[f"{filter.name}__{lookup.name}"], forms.CharField)
 
-    def test_ChoiceLookup(self):
+    def test_ChoiceLookup__from_choices_argument(self):
         choices = [("y", "Yes"), ("n", "No")]
         lookup = ChoiceLookup("exact", choices=choices)
         filter = Filter(lookup, label="Category")
         filter = filter.bind("category")
 
-        form_fields = filter.as_form_fields()
+        filterset = None  # Unused in this test
+        form_fields = filter.as_form_fields(filterset)
         assert len(form_fields) == 1
         form_field = form_fields[f"{filter.name}__{lookup.name}"]
         assert isinstance(form_field, forms.ChoiceField)
         assert form_field.choices == choices
+
+    def test_ChoiceLookup__from_field_choices(self):
+        class TestFilterSet(StudyFilterSet):
+            state = Filter(ChoiceLookup("exact"), label="State")
+
+        model = TestFilterSet._meta.model
+        filter = TestFilterSet._meta.filters['state']
+        lookup = filter.lookups[0]
+
+        form_fields = filter.as_form_fields(TestFilterSet)
+        assert len(form_fields) == 1
+        form_field = form_fields[f"{filter.name}__{lookup.name}"]
+        # Expect an instance of ModelChoiceField with queryset for choices.
+        assert isinstance(form_field, forms.ChoiceField)
+        assert form_field.choices == model._meta.get_field('state').get_choices()
+
+    def test_ChoiceLookup__from_related_field_choices(self):
+        class TestFilterSet(StudyFilterSet):
+            participants = Filter(ChoiceLookup("exact"), label="Participant")
+
+        filter = TestFilterSet._meta.filters['participants']
+        lookup = filter.lookups[0]
+
+        form_fields = filter.as_form_fields(TestFilterSet)
+        assert len(form_fields) == 1
+        form_field = form_fields[f"{filter.name}__{lookup.name}"]
+        # Expect an instance of ModelChoiceField with queryset for choices.
+        assert isinstance(form_field, forms.ModelChoiceField)
+        # No need to test for the queryset, because ModelChoiceField
+        # init is strict with this requirement.
 
     def test_DateRangeLookup(self):
         lookup = DateRangeLookup("range", label="between")
         filter = Filter(lookup, label="Created")
         filter = filter.bind("created")
 
-        form_fields = filter.as_form_fields()
+        filterset = None  # Unused in this test
+        form_fields = filter.as_form_fields(filterset)
         assert len(form_fields) == 2
         assert all(isinstance(f, forms.DateField) for f in form_fields.values())
         lte_form_field, gte_form_field = form_fields

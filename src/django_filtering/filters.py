@@ -55,7 +55,7 @@ class Lookup:
     def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         raise NotImplementedError()
 
-    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
         raise NotImplementedError()
 
 
@@ -86,7 +86,7 @@ class InputLookup(SingleFieldLookup):
 
     type = 'input'
 
-    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
         field_kwargs = {
             'required': False,
             'label': f"{filter.label} {self.label}",
@@ -139,15 +139,34 @@ class ChoiceLookup(SingleFieldLookup):
         definition['choices'] = choices
         return definition
 
-    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
         field_kwargs = {
             'required': False,
             'label': f"{filter.label} {self.label}",
         }
         name = '__'.join([filter.name, self.name])
+
         if self._choices:
             field_kwargs['choices'] = self._choices
-        field = forms.ChoiceField(**field_kwargs)
+            field = forms.ChoiceField(**field_kwargs)
+        else:
+            model_field = filter._resolve_field(
+                context={
+                    'filterset': filterset_cls,
+                    'filter': filter,
+                },
+                lookup=self,
+                field_name=filter.name,
+            )
+            if model_field.choices is not None:
+                # Use choices defined on the field
+                field_kwargs['choices'] = model_field.get_choices()
+                field = forms.ChoiceField(**field_kwargs)
+            else:
+                # Use relation choices
+                qs = model_field.remote_field.model._default_manager.get_queryset()
+                field = forms.ModelChoiceField(qs, **field_kwargs)
+
         return {name: field}
 
 
@@ -179,7 +198,7 @@ class DateRangeLookup(Lookup):
             ),
         )
 
-    def as_form_fields(self, filter) -> dict[str, forms.Field]:
+    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
         gen_label = lambda classifier: f"{filter.label} {classifier}"
         field_kwargs = {
             'required': False,
@@ -393,11 +412,11 @@ class Filter:
             transmuter = self.get_lookup(lookup_name).transmute
         return transmuter(criteria, context=context)
 
-    def as_form_fields(self) -> dict[str, forms.Field]:
+    def as_form_fields(self, filterset_cls) -> dict[str, forms.Field]:
         """
         Produces form fields from this filter.
         """
         form_fields = {}
         for lu in self.lookups:
-            form_fields.update(lu.as_form_fields(self))
+            form_fields.update(lu.as_form_fields(filterset_cls, self))
         return form_fields
