@@ -67,7 +67,7 @@ class SingleFieldLookup(Lookup):
 
     def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         """
-        Produces a ``Q`` object from the query data criteria using the known information.
+        Produces a ``Q`` object from the query data criteria.
         """
         filter = context['filter']
         return Q(
@@ -199,17 +199,16 @@ class DateRangeLookup(Lookup):
         )
 
     def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
-        gen_label = lambda classifier: f"{filter.label} {classifier}"
         field_kwargs = {
             'required': False,
         }
         base_name = '__'.join([filter.name, self.name])
         return {
             f'{base_name}__gte': forms.DateField(
-                label=gen_label("greater than"), **field_kwargs
+                label=f"{filter.label} greater than", **field_kwargs
             ),
             f'{base_name}__lte': forms.DateField(
-                label=gen_label("less than"), **field_kwargs
+                label=f"{filter.label} less than", **field_kwargs
             ),
         }
 
@@ -262,7 +261,10 @@ class Filter:
     def __repr__(self):
         cls_name = self.__class__.__name__
         lookup_names = ', '.join([lu.name for lu in self.lookups])
-        return f"<{cls_name} name=\"{self.name}\" label=\"{self.label}\" lookups=\"{lookup_names}\">"
+        return (
+            f"<{cls_name} name=\"{self.name}\" label=\"{self.label}\" "
+            f"lookups=\"{lookup_names}\">"
+        )
 
     def __hash__(self):
         return hash(
@@ -323,10 +325,12 @@ class Filter:
         In those simple cases the filter's field is resolved using the filter's name.
         ``None`` is returned when the filter name does not reference a model field.
 
-        Further resolution may be necesary when the filter's name references a relational field.
-        The lookup expression for a relational field may be sub-fields of the related model;
-        or in extreme cases additional sub-field references.
-        In this situation the field is resolved to the deepest referenced field in the lookup expression.
+        Further resolution may be necesary
+        when the filter's name references a relational field.
+        The lookup expression for a relational field may be sub-fields
+        of the related model; or in extreme cases additional sub-field references.
+        In this situation the field is resolved
+        to the deepest referenced field in the lookup expression.
 
         """
         if model is None:
@@ -406,10 +410,7 @@ class Filter:
         # Set the lookup name for the transmuter's convenience.
         lookup_name = criteria.setdefault('lookup', self.default_lookup)
 
-        if self._transmuter:
-            transmuter = self._transmuter
-        else:
-            transmuter = self.get_lookup(lookup_name).transmute
+        transmuter = self._transmuter or self.get_lookup(lookup_name).transmute
         return transmuter(criteria, context=context)
 
     def as_form_fields(self, filterset_cls) -> dict[str, forms.Field]:

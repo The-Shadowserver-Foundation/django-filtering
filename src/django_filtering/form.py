@@ -24,7 +24,7 @@ def filtering_form_factory(query_data_field_name='q', cls_base_name=''):
     )
 
 
-def flat_filtering_form_factory(FilterSet, hidden_fields=[]):
+def flat_filtering_form_factory(FilterSet, hidden_fields=None):
     """
     Factory for creating a form
     that can be used with one level of nested query data.
@@ -32,6 +32,9 @@ def flat_filtering_form_factory(FilterSet, hidden_fields=[]):
     The ``HiddenInput`` widget will be set on each field mentioned ``hidden_fields``.
 
     """
+    if hidden_fields is None:
+        hidden_fields = []
+
     form_attrs = {}
     for filter in FilterSet._meta.filters.values():
         form_attrs.update(filter.as_form_fields(FilterSet))
@@ -57,7 +60,7 @@ class FlatFilteringForm(forms.Form):
     Form for receiving the first level of filters and adapting them to the FilterSet.
     """
 
-    def __init__(self, filterset: 'FilterSet', *args, **kwargs):
+    def __init__(self, filterset, *args, **kwargs):
         self.filterset = filterset
         super().__init__(*args, **kwargs)
 
@@ -127,7 +130,7 @@ class FlatFilteringForm(forms.Form):
             qd[0] != 'and'
             or
             # Disabled when nested operators are present.
-            any([qc for qc in qd[1] if qc[0] in nesting_operators])
+            any(qc for qc in qd[1] if qc[0] in nesting_operators)
         ):
             for field in self.fields.values():
                 # Disable the field
@@ -166,7 +169,8 @@ class FlatFilteringForm(forms.Form):
 
     def _disable_fields_for_multivalue_query_data(self):
         """
-        Disables fields when the field appears in the filterset's query data multiple times.
+        Disables fields when the field appears
+        in the filterset's query data multiple times.
         """
         # Infer form field's initial value from the initial query data.
         q = self.filterset.query_data
@@ -177,7 +181,8 @@ class FlatFilteringForm(forms.Form):
                 use_counts.appendlist(field_name, value)
 
         # Disable fields that have more than one use in the query data.
-        # This is done because the UI can't currently handle more than one value in the form input.
+        # This is done because the UI can't currently handle more than one value
+        # in the form input.
         fields_to_disable = [
             field for field in use_counts if len(use_counts.getlist(field)) >= 2
         ]
@@ -191,8 +196,8 @@ class FlatFilteringForm(forms.Form):
 
     def __get_field_name_and_value(self, q_item):
         field_name, value = construct_field_lookup_arg(q_item[0], **q_item[1])
-        # Some form fields that are 'exact' matching do not use the '__exact' lookup suffix.
-        # So we compare the constructed field_name with actual field names.
+        # Some form fields that are 'exact' matching do not use the '__exact' lookup
+        # suffix. So we compare the constructed field_name with actual field names.
         if q_item[1].get('lookup', None) == 'exact' and field_name not in self.fields:
             # Essentially drops the `__exact` lookup suffix.
             field_name = q_item[0]

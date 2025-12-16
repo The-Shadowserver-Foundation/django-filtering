@@ -334,12 +334,6 @@ class TestFilterSetFormAdaptation:
         filterset = FilterSet(deepcopy(query_data))
         form = Form(filterset, data)
 
-        # Expect the initial values to be set from the filterset's query data.
-        expected_initial = {
-            'category__exact': f1_value,
-            'brand__exact': filterset.get_filter('brand').sticky_value,
-        }
-
         # Invoke cleaning; and thus translation of form data to query data.
         assert not form.errors
 
@@ -360,13 +354,13 @@ class TestFilterSetFormAdaptation:
 
     def assert_form_is_disabled(self, form):
         # Expect the form to know it is not enabled.
-        assert form.is_enabled == False
+        assert form.is_enabled is False
 
         # Expect the initial values to be unset.
         assert form.initial == {}
 
         # Expect all form fields to be disabled
-        assert all([f.disabled for f in form.fields.values()])
+        assert all(f.disabled for f in form.fields.values())
 
     def test_form_disabled__with_other_operators(self):
         FilterSet, Form = self.make_em(StudyFilterSet)
