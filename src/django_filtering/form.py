@@ -24,7 +24,7 @@ def filtering_form_factory(query_data_field_name='q', cls_base_name=''):
     )
 
 
-def flat_filtering_form_factory(FilterSet: type['FilterSet'], hidden_fields=[]):
+def flat_filtering_form_factory(FilterSet, hidden_fields=[]):
     """
     Factory for creating a form
     that can be used with one level of nested query data.
