@@ -1,3 +1,7 @@
+## Unreleased
+
+- Fixed: Corrected the choice form field generation for manytomany relational field (i.e. reverse relational field).
+
 ## 0.3.1 - 2025-Dec-15
 
 - Added: Wrote a changelog to keep track of release history.

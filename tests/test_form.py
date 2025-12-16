@@ -10,7 +10,8 @@ from django_filtering.filters import (
     InputLookup,
 )
 from django_filtering.form import flat_filtering_form_factory
-from tests.lab_app.filters import StudyFilterSet
+from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
+from tests.lab_app.models import Study
 from tests.market_app.filters import ProductFilterSet, TopBrandKitchenProductFilterSet
 
 
@@ -67,6 +68,21 @@ class TestLookupToFormField:
         assert isinstance(form_field, forms.ModelChoiceField)
         # No need to test for the queryset, because ModelChoiceField
         # init is strict with this requirement.
+
+    def test_ChoiceLookup__from_reverse_related_field_choices(self):
+        class TestFilterSet(ParticipantFilterSet):
+            studies = Filter(ChoiceLookup("exact"), label="Study")
+
+        filter = TestFilterSet._meta.filters['studies']
+        lookup = filter.lookups[0]
+
+        form_fields = filter.as_form_fields(TestFilterSet)
+        assert len(form_fields) == 1
+        form_field = form_fields[f"{filter.name}__{lookup.name}"]
+        # Expect an instance of ModelChoiceField with queryset for choices.
+        assert isinstance(form_field, forms.ModelChoiceField)
+        # Test the queryset is using the correct model
+        assert form_field.queryset.model is Study
 
     def test_DateRangeLookup(self):
         lookup = DateRangeLookup("range", label="between")

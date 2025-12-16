@@ -158,7 +158,7 @@ class ChoiceLookup(SingleFieldLookup):
                 lookup=self,
                 field_name=filter.name,
             )
-            if model_field.choices is not None:
+            if hasattr(model_field, 'choices') and model_field.choices is not None:
                 # Use choices defined on the field
                 field_kwargs['choices'] = model_field.get_choices()
                 field = forms.ChoiceField(**field_kwargs)
