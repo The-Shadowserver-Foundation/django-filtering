@@ -132,6 +132,15 @@ class TestFilterSetFormAdaptation:
         # Expect the form to be aware of the sticky fields.
         assert Form.Meta.sticky_fields == ['brand__exact', 'category__exact']
 
+        # Expect the form to have initial values set to the sticky values.
+        filterset = FilterSet()
+        form = Form(filterset)
+        expected = {
+            'brand__exact': FilterSet._meta.filters['brand'].sticky_value,
+            'category__exact': FilterSet._meta.filters['category'].sticky_value,
+        }
+        assert form.initial == expected
+
     def test_init_initial_from_filterset(self):
         """
         Testing form init sets the ``initial`` data from the filterset.

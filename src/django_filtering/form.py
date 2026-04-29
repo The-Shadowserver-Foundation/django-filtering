@@ -148,6 +148,10 @@ class FlatFilteringForm(forms.Form):
         """
         Populate the form with initial data from the filterset.
         """
+        for field_name in self.Meta.sticky_fields:
+            filter = self.__get_filter_by_field_name(field_name)
+            self.initial[field_name] = filter.sticky_value
+
         # Infer form field's initial value from the initial query data.
         q = self.filterset.query_data
         if q and len(q) == 2:
