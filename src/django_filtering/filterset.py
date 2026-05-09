@@ -430,12 +430,16 @@ class FilterSet(metaclass=FilterSetType):
         return sticky_q & q if q else sticky_q
 
 
-def filterset_factory(model, base_cls=FilterSet, filters='__all__'):
+def filterset_factory(model, base_cls=FilterSet, fields=None):
     """
     Factory for creating a FilterSet from a model
     """
+    if base_cls is FilterSet and fields is None:
+        # Assign all fields when calling this function without a base class.
+        fields = '__all__'
+
     # Build up a list of attributes that the Meta object will have.
-    attrs = {"model": model, "filters": filters}
+    attrs = {"model": model, "fields": fields}
 
     # If parent class already has an inner Meta, the Meta we're
     # creating needs to inherit from the parent's inner meta.
