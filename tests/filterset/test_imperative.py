@@ -117,7 +117,7 @@ class TestFilterSetCreation:
         assert get_meta_attrs(ParticipantFilterSet) == expected_options
 
         # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
-        assert [name for name in ParticipantFilterSet._meta.filters] == ['age', 'name']
+        assert list(ParticipantFilterSet._meta.filters) == ['age', 'name']
 
         # Check for the expected filters and lookups
         filterset = ParticipantFilterSet()
@@ -133,7 +133,7 @@ class TestFilterQuerySet:
     def make_participants(self):
         names = ["Aniket Olusola", "Kanta Flora", "Radha Wenilo"]
         # Create objects to filter against
-        return list([baker.make(Participant, name=name) for name in names])
+        return [baker.make(Participant, name=name) for name in names]
 
     def setup_method(self):
         self.participants = self.make_participants()
@@ -233,9 +233,7 @@ class TestFilterSetTransmutesQueryData:
         )
         filterset = ProductFilterSet(data)
         q = filterset._transmute(filterset.query_data, queryset=None)
-        expected = Q(name__icontains="stove") | (
-            Q(name__icontains="oven") & ~Q(name__icontains="microwave")
-        )
+        expected = Q(name__icontains="stove") | (Q(name__icontains="oven") & ~Q(name__icontains="microwave"))
         assert q == expected
 
     def test_deep_grouped_conditions(self):
@@ -273,11 +271,7 @@ class TestFilterSetTransmutesQueryData:
             Q(category__in=["Kitchen", "Bath"])
             & Q(stocked_on__year__gte="2024")
             & (
-                (
-                    Q(name__icontains="soap")
-                    & Q(name__icontains="hand")
-                    & ~Q(name__icontains="lotion")
-                )
+                (Q(name__icontains="soap") & Q(name__icontains="hand") & ~Q(name__icontains="lotion"))
                 | Q(brand__exact="Safe Soap")
             )
         )
@@ -309,9 +303,7 @@ class TestFilterSetTransmutesQueryData:
         filterset.validate()
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be added to the query
-        expected = Q(("category__exact", "Kitchen")) & Q(
-            ("name__icontains", "sink"), _connector=Q.AND
-        )
+        expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
 
     def test_sticky_filter__default_in_query_data(self):
@@ -330,9 +322,7 @@ class TestFilterSetTransmutesQueryData:
         filterset.validate()
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be present
-        expected = Q(("category__exact", "Kitchen")) & Q(
-            ("name__icontains", "sink"), _connector=Q.AND
-        )
+        expected = Q(("category__exact", "Kitchen")) & Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
 
     def test_sticky_filter__overridden_in_query_data(self):
@@ -351,9 +341,7 @@ class TestFilterSetTransmutesQueryData:
         filterset.validate()
         q = filterset.get_query(queryset=None)
         # Expect the sticky filter to be present
-        expected = Q(("category__exact", "Bath")) & Q(
-            ("name__icontains", "sink"), _connector=Q.AND
-        )
+        expected = Q(("category__exact", "Bath")) & Q(("name__icontains", "sink"), _connector=Q.AND)
         assert q == expected
 
     def test_sticky_filter__unstick_value_in_query_data(self):
@@ -364,9 +352,7 @@ class TestFilterSetTransmutesQueryData:
         This test case essentially tests for the removal
         of the sticky filter from the overall query.
         """
-        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters[
-            'category'
-        ].solvent_value
+        solvent_user_value = KitchenProductFilterSet._meta.sticky_filters['category'].solvent_value
         data = [
             "and",
             [
@@ -455,12 +441,8 @@ class TestFilterSetTransmutesQueryData:
         assert q == expected
 
     def test_several_sticky_filters__unstick_value_in_query_data(self):
-        category_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter(
-            'category'
-        ).solvent_value
-        brand_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter(
-            'brand'
-        ).solvent_value
+        category_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('category').solvent_value
+        brand_solvent_user_value = TopBrandKitchenProductFilterSet._meta.get_filter('brand').solvent_value
         data = [
             "and",
             [
@@ -558,7 +540,9 @@ class TestFilterSetQueryData:
         expected_errors = [
             {
                 'json_path': '$[1][0]',
-                'message': "['title', {'lookup': 'icontains', 'value': 'miss'}] is not valid under any of the given schemas",
+                'message': (
+                    "['title', {'lookup': 'icontains', 'value': 'miss'}] is not valid under any of the given schemas"
+                ),
             },
         ]
         assert filterset.errors == expected_errors

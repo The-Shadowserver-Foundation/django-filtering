@@ -43,10 +43,7 @@ def deconstruct_field_lookup_arg(
     """
     split_info = field_lookup.split("__", 1)
     name = split_info.pop(0)
-    if len(split_info) == 0:
-        lookup = 'exact'
-    else:
-        lookup = split_info.pop()
+    lookup = 'exact' if len(split_info) == 0 else split_info.pop()
     opts = {'value': value, 'lookup': lookup}
     return [name, opts]
 
@@ -63,10 +60,7 @@ def deconstruct_query(
     field_lookup, value = query.children[0]
     split_info = field_lookup.split("__", 1)
     name = split_info.pop(0)
-    if len(split_info) == 0:
-        lookup = 'exact'
-    else:
-        lookup = split_info.pop()
+    lookup = 'exact' if len(split_info) == 0 else split_info.pop()
     opts = {'value': value, 'lookup': lookup}
     return [name, opts]
 

@@ -1,2 +1,2 @@
 from .filters import *
-from .filterset import FilterSet, filterset_factory
+from .filterset import *

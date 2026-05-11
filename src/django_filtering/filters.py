@@ -45,9 +45,7 @@ class Lookup:
 
     def __repr__(self):
         cls_name = self.__class__.__name__
-        return (
-            f'<{cls_name} name="{self.name}" type="{self.type}" label="{self.label}">'
-        )
+        return f'<{cls_name} name="{self.name}" type="{self.type}" label="{self.label}">'
 
     def clean(self, value: Any):
         return value
@@ -131,10 +129,7 @@ class ChoiceLookup(SingleFieldLookup):
             else:
                 choices = list(field.get_choices(include_blank=False))
         else:
-            if callable(self._choices):
-                choices = self._choices(lookup=self, field=field)
-            else:
-                choices = self._choices
+            choices = self._choices(lookup=self, field=field) if callable(self._choices) else self._choices
 
         definition['choices'] = choices
         return definition
@@ -204,12 +199,8 @@ class DateRangeLookup(Lookup):
         }
         base_name = '__'.join([filter.name, self.name])
         return {
-            f'{base_name}__gte': forms.DateField(
-                label=f"{filter.label} greater than", **field_kwargs
-            ),
-            f'{base_name}__lte': forms.DateField(
-                label=f"{filter.label} less than", **field_kwargs
-            ),
+            f'{base_name}__gte': forms.DateField(label=f"{filter.label} greater than", **field_kwargs),
+            f'{base_name}__lte': forms.DateField(label=f"{filter.label} less than", **field_kwargs),
         }
 
 
@@ -244,9 +235,7 @@ class Filter:
         self.lookups = lookups
         # Ensure at least one lookup has been defined.
         if len(self.lookups) == 0:
-            raise ValueError(
-                "Must specify at least one lookup for the filter (e.g. InputLookup)."
-            )
+            raise ValueError("Must specify at least one lookup for the filter (e.g. InputLookup).")
         # Assign the default lookup to use or default to the first defined lookup.
         self.default_lookup = default_lookup if default_lookup else self.lookups[0].name
         if label is None:
@@ -261,10 +250,7 @@ class Filter:
     def __repr__(self):
         cls_name = self.__class__.__name__
         lookup_names = ', '.join([lu.name for lu in self.lookups])
-        return (
-            f"<{cls_name} name=\"{self.name}\" label=\"{self.label}\" "
-            f"lookups=\"{lookup_names}\">"
-        )
+        return f"<{cls_name} name=\"{self.name}\" label=\"{self.label}\" lookups=\"{lookup_names}\">"
 
     def __hash__(self):
         return hash(
@@ -389,9 +375,7 @@ class Filter:
         cleaned = criteria.copy()
 
         # Defer to the lookup instance for cleaning specifics
-        cleaned['value'] = self.get_lookup(criteria.get('lookup')).clean(
-            criteria['value']
-        )
+        cleaned['value'] = self.get_lookup(criteria.get('lookup')).clean(criteria['value'])
 
         # Check if the cleaned value is the solvent that removes the sticky filter.
         if cleaned['value'] == self.solvent_value:

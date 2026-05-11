@@ -16,9 +16,7 @@ class FilteringOptionsSchema:
             "not": {"type": "operator", "label": "None of..."},
         }
         filters = {
-            f.name: f.get_options_schema_info(
-                context=self.filterset.make_context(filter=f)
-            )
+            f.name: f.get_options_schema_info(context=self.filterset.make_context(filter=f))
             for f in self.filterset.filters
         }
         return {
@@ -84,7 +82,7 @@ class JSONSchema:
                     {
                         "type": "object",
                         "properties": {
-                            "lookup": {"enum": [l.name for l in filter.lookups]},
+                            "lookup": {"enum": [lu.name for lu in filter.lookups]},
                             # TODO Restrict value types to desired input type.
                             "value": {
                                 "type": [

@@ -14,6 +14,12 @@ from .schemas import FilteringOptionsSchema, JSONSchema
 from .utils import model_field_label
 
 
+__all__ = (
+    'filterset_factory',
+    'FilterSet',
+)
+
+
 ALL_FIELDS = "__all__"
 ALL_LOOKUPS = "__all__"
 
@@ -147,11 +153,7 @@ class Metadata:
         if self.model:
             # Generate the filters for meta declared fields and lookups.
             field_filters = filters_for_model(self.model, fields=self.fields)
-            self._filters |= {
-                name: filter
-                for name, filter in field_filters.items()
-                if name not in self._filters
-            }
+            self._filters |= {name: filter for name, filter in field_filters.items() if name not in self._filters}
 
     def contribute_to_class(self, cls):
         """
@@ -161,11 +163,11 @@ class Metadata:
         cls.Meta = type(
             'Meta',
             (Options,),
-            dict(
-                abstract=self.is_abstract,
-                model=self.model,
-                fields=self.fields,
-            ),
+            {
+                'abstract': self.is_abstract,
+                'model': self.model,
+                'fields': self.fields,
+            },
         )
 
     @cached_property
@@ -192,9 +194,7 @@ class FilterSetType(type):
         if Meta is None:
             meta_opts = {}
         else:
-            meta_opts = {
-                k: v for k, v in Meta.__dict__.items() if not k.startswith('_')
-            }
+            meta_opts = {k: v for k, v in Meta.__dict__.items() if not k.startswith('_')}
 
         if not bases:
             # Treat base FilterSet as abstract
@@ -216,9 +216,8 @@ class FilterSetType(type):
         except MetadataException as exc:
             if isinstance(exc, RequiredMetadataError):
                 raise ValueError(
-                    f"Creation of {name} errored due "
-                    f"to a missing required metadata property: {exc.args[0]}"
-                )
+                    f"Creation of {name} errored due to a missing required metadata property: {exc.args[0]}"
+                ) from exc
 
         cls = super().__new__(mcs, name, bases, attrs)
         cls._meta.contribute_to_class(cls)
@@ -301,8 +300,8 @@ class FilterSet(metaclass=FilterSetType):
         if settings.DEBUG:
             try:
                 cls.check_schema(schema)
-            except jsonschema.SchemaError:
-                raise RuntimeError("The generated schema is invalid. This is a bug.")
+            except jsonschema.SchemaError as exc:
+                raise RuntimeError("The generated schema is invalid. This is a bug.") from exc
 
         return cls(schema)
 
@@ -344,9 +343,7 @@ class FilterSet(metaclass=FilterSetType):
             'filter': filter,
         }
 
-    def _transmute(
-        self, query_data: None | list, queryset: QuerySet, _is_root: bool = True
-    ) -> Q | None:
+    def _transmute(self, query_data: None | list, queryset: QuerySet, _is_root: bool = True) -> Q | None:
         """
         Transmute the given query data to a ``Q`` object.
         """
@@ -378,15 +375,15 @@ class FilterSet(metaclass=FilterSetType):
                 q = Q.create(q.children, negated=is_negated)
         return q
 
-    def call_transmuter(
-        self, criteria: dict[str, Any], context: dict[str, Any]
-    ) -> Q | None:
+    def call_transmuter(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         """
         Obtains the transmuter function given contextual information.
         Returns a callable that will transmute the context into a Q instance.
 
-        Definition of a custom transmuter can be done by creating a method on the `FilterSet`
-        named `transmute_<filter>` and/or more specific to the lookup as `transmute_<filter>__<lookup...>`.
+        Define a custom transmuter on the `FilterSet`
+        by creating a method named: `transmute_<filter>`.
+        To just transmute a specific lookup,
+        name the method: `transmute_<filter>__<lookup...>`.
         These transmuter methods are intended to provide the developer with
         an easy way to override the default transmute logic of the filter.
         """
@@ -419,7 +416,7 @@ class FilterSet(metaclass=FilterSetType):
             query_data_filter_names = {key for key, _ in self.query_data[1]}
         else:
             # Empty set because no query data was provided.
-            query_data_filter_names = set([])
+            query_data_filter_names = set()
 
         sticky_q = Q()
         for sf in self.sticky_filters:

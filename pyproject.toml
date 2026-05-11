@@ -43,6 +43,7 @@ addopts = "-vv --pdbcls=IPython.terminal.debugger:TerminalPdb"
 
 [tool.ruff]
 target-version = "py310"
+line-length = 120
 
 [tool.ruff.format]
 # Allow whatever quoting makes sense for the situation.
@@ -65,7 +66,7 @@ select = [
     # mccabe
     "C",
 ]
-ignore = [ "F403" ]
+ignore = [ "F403", "SIM108" ]
 
 [tool.ruff.lint.isort]
 # Use a double line break after each import block.

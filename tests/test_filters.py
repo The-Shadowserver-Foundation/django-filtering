@@ -36,9 +36,7 @@ class TestInputLookup:
         criteria = {'value': 10, 'lookup': lookup_name}
 
         # Target
-        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(
-            count__gte=10
-        )
+        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(count__gte=10)
 
 
 class TestChoiceLookup:
@@ -74,9 +72,7 @@ class TestChoiceLookup:
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        target_field = models.CharField(
-            name='type', choices=Type.choices, default=Type.MANUAL
-        )
+        target_field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
         static_choices = [
             ('any', 'Any'),
             ('manual', 'Manual'),
@@ -102,9 +98,7 @@ class TestChoiceLookup:
             MANUAL = 'manual', 'Manual'
             BULK = 'bulk', 'Bulk'
 
-        target_field = models.CharField(
-            name='type', choices=Type.choices, default=Type.MANUAL
-        )
+        target_field = models.CharField(name='type', choices=Type.choices, default=Type.MANUAL)
         static_choices = [
             ('any', 'Any'),
             ('manual', 'Manual'),
@@ -144,9 +138,7 @@ class TestChoiceLookup:
         criteria = {'value': 10, 'lookup': lookup_name}
 
         # Target
-        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(
-            count__gte=10
-        )
+        assert lookup.transmute(criteria, context={'filter': filter}) == models.Q(count__gte=10)
 
 
 class TestDateRangeLookup:
@@ -188,9 +180,7 @@ class TestDateRangeLookup:
                 f'{filter.name}__lte': d2.isoformat(),
             }
         )
-        assert (
-            lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
-        )
+        assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
 
     @pytest.mark.skip(reason="not yet implemented")
     def test_validation(self):
@@ -211,9 +201,7 @@ class TestFilter:
                 default_lookup='icontains',
             )
         assert exc_info.type is ValueError
-        assert (
-            exc_info.value.args[0] == "At this time, the filter label must be provided."
-        )
+        assert exc_info.value.args[0] == "At this time, the filter label must be provided."
 
     def test_init_wo_default_lookup(self):
         # Target
@@ -270,10 +258,7 @@ class TestFilter:
         expected = {
             'default_lookup': default_lookup,
             'label': label,
-            'lookups': {
-                a[0]: {'label': kw['label'], 'type': cls.type}
-                for cls, a, kw in lookups_data
-            },
+            'lookups': {a[0]: {'label': kw['label'], 'type': cls.type} for cls, a, kw in lookups_data},
         }
         assert options_schema_info == expected
 
@@ -357,9 +342,7 @@ class TestFilter:
             return Q(something__in=['a', 'b', 'c'])
 
         filter = filters.Filter(
-            filters.ChoiceLookup(
-                'exact', label=":", choices=((True, 'Yes'), (False, 'No'))
-            ),
+            filters.ChoiceLookup('exact', label=":", choices=((True, 'Yes'), (False, 'No'))),
             label='Has something?',
             transmuter=assertion_transmuter,
         )
@@ -406,9 +389,7 @@ class TestStickyFilter:
             'filter': filter,
             'queryset': None,  # not needed for this test
         }
-        assert filter.transmute(criteria, context=context) == models.Q(
-            type__exact='bulk'
-        )
+        assert filter.transmute(criteria, context=context) == models.Q(type__exact='bulk')
 
         # Ensure value does not translate to a Q argument
         criteria = {'lookup': 'exact', 'value': solvent_value}
@@ -417,12 +398,10 @@ class TestStickyFilter:
             'filter': filter,
             'queryset': None,  # not needed for this test
         }
-        assert filter.transmute(criteria, context=context) == None
+        assert filter.transmute(criteria, context=context) is None
 
         # Check the default Q argument
-        assert filter.get_sticky_Q(context=context) == models.Q(
-            type__exact=sticky_value
-        )
+        assert filter.get_sticky_Q(context=context) == models.Q(type__exact=sticky_value)
 
 
 @pytest.mark.django_db
@@ -496,13 +475,10 @@ class TestFilterWithDBAccess:
         context = {'filterset': filterset, 'filter': filter, 'queryset': None}
 
         options_schema_info = filter.get_options_schema_info(context)
-        lookups_info = zip(lookup_definitions, lookup_supporting_info)
+        lookups_info = zip(lookup_definitions, lookup_supporting_info, strict=True)
         expected = {
             'default_lookup': lookup_definitions[0][1][0],
             'label': label,
-            'lookups': {
-                a[0]: {'label': kw['label'], 'type': cls.type, **info}
-                for (cls, a, kw), info in lookups_info
-            },
+            'lookups': {a[0]: {'label': kw['label'], 'type': cls.type, **info} for (cls, a, kw), info in lookups_info},
         }
         assert options_schema_info == expected
