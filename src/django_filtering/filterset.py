@@ -10,7 +10,7 @@ from django.db.models import Model, Q, QuerySet
 
 from . import filters
 from .filters import Filter
-from .schema import FilteringOptionsSchema, JSONSchema
+from .schemas import FilteringOptionsSchema, JSONSchema
 from .utils import model_field_label
 
 

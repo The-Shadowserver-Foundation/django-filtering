@@ -7,7 +7,7 @@ from model_bakery import baker
 from django_filtering import filters
 from django_filtering.conf import configurator
 from django_filtering.filterset import FilterSet
-from django_filtering.schema import FilteringOptionsSchema, JSONSchema
+from django_filtering.schemas import FilteringOptionsSchema, JSONSchema
 from tests.lab_app import models
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
 from tests.lab_app.utils import CONTINENT_CHOICES

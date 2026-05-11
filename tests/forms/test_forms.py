@@ -9,7 +9,7 @@ from django_filtering.filters import (
     Filter,
     InputLookup,
 )
-from django_filtering.form import flat_filtering_form_factory
+from django_filtering.forms import flat_filtering_form_factory
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
 from tests.lab_app.models import Study
 from tests.market_app.filters import ProductFilterSet, TopBrandKitchenProductFilterSet
