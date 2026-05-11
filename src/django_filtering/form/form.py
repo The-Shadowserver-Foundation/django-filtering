@@ -4,8 +4,15 @@ from functools import cached_property
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
-from .filters import Filter
-from .utils import construct_field_lookup_arg, deconstruct_field_lookup_arg
+from ..filters import Filter
+from ..utils import construct_field_lookup_arg, deconstruct_field_lookup_arg
+
+
+__all__ = (
+    'filtering_form_factory',
+    'flat_filtering_form_factory',
+    'FlatFilteringForm',
+)
 
 
 def filtering_form_factory(query_data_field_name='q', cls_base_name=''):
