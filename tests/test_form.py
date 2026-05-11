@@ -115,7 +115,7 @@ class TestFilterSetFormAdaptation:
             assert isinstance(Form.base_fields[field_name], field_cls)
 
         # Expect the Form's class name to derive from the FilterSet class name.
-        assert Form.__name__ == f"{FilterSet.__name__}FlatFilteringForm"
+        assert Form.__name__ == f"{FilterSet.__name__}Form"
 
     def test_blank__with_sticky_filters(self):
         FilterSet, Form = self.make_em(TopBrandKitchenProductFilterSet)

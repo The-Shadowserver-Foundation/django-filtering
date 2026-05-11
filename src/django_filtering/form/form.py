@@ -31,37 +31,6 @@ def filtering_form_factory(query_data_field_name='q', cls_base_name=''):
     )
 
 
-def flat_filtering_form_factory(FilterSet, hidden_fields=None):
-    """
-    Factory for creating a form
-    that can be used with one level of nested query data.
-
-    The ``HiddenInput`` widget will be set on each field mentioned ``hidden_fields``.
-
-    """
-    if hidden_fields is None:
-        hidden_fields = []
-
-    form_attrs = {}
-    for filter in FilterSet._meta.filters.values():
-        form_attrs.update(filter.as_form_fields(FilterSet))
-    form_attrs['Meta'] = type(
-        'Meta', (), {'sticky_fields': [], 'hidden_fields': hidden_fields}
-    )
-    for filter in FilterSet._meta.sticky_filters.values():
-        _fields = filter.as_form_fields(FilterSet)
-        form_attrs['Meta'].sticky_fields.extend(x for x in _fields)
-        form_attrs.update(_fields)
-    return type(
-        # name
-        f'{FilterSet.__name__}FlatFilteringForm',
-        # bases
-        (FlatFilteringForm,),
-        # attrs
-        form_attrs,
-    )
-
-
 class FlatFilteringForm(forms.Form):
     """
     Form for receiving the first level of filters and adapting them to the FilterSet.
@@ -285,3 +254,40 @@ class FlatFilteringForm(forms.Form):
         if not (self.filterset.query_data and self.filterset.query_data[1]):
             # No conditions; blank the data so an empty structure isn't publically used.
             self.filterset.query_data = []
+
+
+def flat_filtering_form_factory(
+    filterset_cls, bases=(FlatFilteringForm,), hidden_fields=None
+):
+    """
+    Factory for creating a form
+    that can be used with one level of nested query data.
+
+    The ``HiddenInput`` widget will be set on each field mentioned ``hidden_fields``.
+
+    """
+    if hidden_fields is None:
+        hidden_fields = []
+    if not any(issubclass(base, FlatFilteringForm) for base in bases):
+        raise TypeError(
+            f"None of the given bases is or derives from {FlatFilteringForm.__name__}"
+        )
+
+    form_attrs = {}
+    for filter in filterset_cls._meta.filters.values():
+        form_attrs.update(filter.as_form_fields(filterset_cls))
+    form_attrs['Meta'] = type(
+        'Meta', (), {'sticky_fields': [], 'hidden_fields': hidden_fields}
+    )
+    for filter in filterset_cls._meta.sticky_filters.values():
+        _fields = filter.as_form_fields(filterset_cls)
+        form_attrs['Meta'].sticky_fields.extend(x for x in _fields)
+        form_attrs.update(_fields)
+    return type(
+        # name
+        f'{filterset_cls.__name__}Form',
+        # bases
+        bases,
+        # attrs
+        form_attrs,
+    )
