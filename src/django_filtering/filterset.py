@@ -90,7 +90,7 @@ def filters_for_model(
 
         if filter_factory_callback is None:
             filter = default_filter_factory(field, **kwargs)
-        elif not callable(formfield_callback):
+        elif not callable(filter_factory_callback):
             raise TypeError("filter_factory_callback must be a function or callable")
         else:
             filter = filter_factory_callback(field, **kwargs)
