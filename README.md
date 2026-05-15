@@ -24,8 +24,14 @@ Install via pip or the preferred package manager:
 
     pip install django-filtering
 
-At this time, this package is more of a library than an installablable app.
-So there is no reason to add it to the Django project's `INSTALLED_APPS`.
+Add to the Django project's `INSTALLED_APPS`:
+
+    INSTALLED_APPS = [
+        # ...
+        'django_filtering',
+        # ...
+    ]
+
 
 ## Usage
 

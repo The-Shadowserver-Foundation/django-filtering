@@ -6,6 +6,7 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, Model, Q
 
 from .conf import configurator
+from .forms.fields import DateRangeField
 from .utils import construct_field_lookup_arg, deconstruct_query
 
 
@@ -53,7 +54,7 @@ class Lookup:
     def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         raise NotImplementedError()
 
-    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
+    def as_form_field(self, filterset_cls, filter) -> forms.Field:
         raise NotImplementedError()
 
 
@@ -84,14 +85,12 @@ class InputLookup(SingleFieldLookup):
 
     type = 'input'
 
-    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
+    def as_form_field(self, filterset_cls, filter) -> forms.Field:
         field_kwargs = {
             'required': False,
             'label': f"{filter.label} {self.label}",
         }
-        name = '__'.join([filter.name, self.name])
-        field = forms.CharField(**field_kwargs)
-        return {name: field}
+        return forms.CharField(**field_kwargs)
 
 
 class ChoiceLookup(SingleFieldLookup):
@@ -134,13 +133,11 @@ class ChoiceLookup(SingleFieldLookup):
         definition['choices'] = choices
         return definition
 
-    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
+    def as_form_field(self, filterset_cls, filter) -> forms.Field:
         field_kwargs = {
             'required': False,
             'label': f"{filter.label} {self.label}",
         }
-        name = '__'.join([filter.name, self.name])
-
         if self._choices:
             field_kwargs['choices'] = self._choices
             field = forms.ChoiceField(**field_kwargs)
@@ -161,14 +158,12 @@ class ChoiceLookup(SingleFieldLookup):
                 # Use relation choices
                 qs = model_field.remote_field.model._default_manager.get_queryset()
                 field = forms.ModelChoiceField(qs, **field_kwargs)
-
-        return {name: field}
+        return field
 
 
 class DateRangeLookup(Lookup):
     """
     Represents inputs for querying between a date range.
-
     """
 
     type = 'date-range'
@@ -180,6 +175,7 @@ class DateRangeLookup(Lookup):
 
     def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         filter = context['filter']
+        # FIXME Use the `range` lookup, but enforce the lookup name as `range` prior to making this change.
         return Q(
             construct_field_lookup_arg(
                 filter.name,
@@ -193,15 +189,11 @@ class DateRangeLookup(Lookup):
             ),
         )
 
-    def as_form_fields(self, filterset_cls, filter) -> dict[str, forms.Field]:
+    def as_form_field(self, filterset_cls, filter) -> forms.Field:
         field_kwargs = {
             'required': False,
         }
-        base_name = '__'.join([filter.name, self.name])
-        return {
-            f'{base_name}__gte': forms.DateField(label=f"{filter.label} greater than", **field_kwargs),
-            f'{base_name}__lte': forms.DateField(label=f"{filter.label} less than", **field_kwargs),
-        }
+        return DateRangeField(**field_kwargs)
 
 
 # A sentry value used to signal when the user has selected
@@ -221,7 +213,7 @@ class Filter:
 
     """
 
-    _name: str | None = None
+    _name: str
 
     def __init__(
         self,
@@ -401,7 +393,7 @@ class Filter:
         """
         Produces form fields from this filter.
         """
-        form_fields = {}
-        for lu in self.lookups:
-            form_fields.update(lu.as_form_fields(filterset_cls, self))
-        return form_fields
+        return {self.get_form_field_name(lu): lu.as_form_field(filterset_cls, self) for lu in self.lookups}
+
+    def get_form_field_name(self, lookup: Lookup) -> str:
+        return '__'.join([self.name, lookup.name])

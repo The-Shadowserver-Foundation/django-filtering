@@ -9,9 +9,11 @@ from django_filtering.filters import (
     Filter,
     InputLookup,
 )
+from django_filtering.filterset import FilterSet
 from django_filtering.forms import flat_filtering_form_factory
+from django_filtering.forms.fields import DateRangeField
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
-from tests.lab_app.models import Study
+from tests.lab_app.models import Participant, Study
 from tests.market_app.filters import ProductFilterSet, TopBrandKitchenProductFilterSet
 
 
@@ -91,11 +93,8 @@ class TestLookupToFormField:
 
         filterset = None  # Unused in this test
         form_fields = filter.as_form_fields(filterset)
-        assert len(form_fields) == 2
-        assert all(isinstance(f, forms.DateField) for f in form_fields.values())
-        lte_form_field, gte_form_field = form_fields
-        assert 'created__range__lte' in form_fields
-        assert 'created__range__gte' in form_fields
+        assert len(form_fields) == 1
+        assert isinstance(form_fields[f'{filter.name}__{lookup.name}'], DateRangeField)
 
 
 class TestFilterSetFormAdaptation:
@@ -281,9 +280,7 @@ class TestFilterSetFormAdaptation:
 
         # Expect a condition to have been added to the query data.
         expected_query_data = deepcopy(query_data)
-        expected_query_data[1].append(
-            ['continent', {'lookup': 'exact', 'value': f2_value}]
-        )
+        expected_query_data[1].append(['continent', {'lookup': 'exact', 'value': f2_value}])
         assert filterset.query_data == expected_query_data
 
     def test_form_updates_filterset(self):
@@ -372,9 +369,7 @@ class TestFilterSetFormAdaptation:
         assert form.errors
 
         # Expect the Form to have errors.
-        expected_error_message = [
-            "The form is disabled when nested filters or non-'and' operations are used."
-        ]
+        expected_error_message = ["The form is disabled when nested filters or non-'and' operations are used."]
         assert form.errors['__all__'] == expected_error_message
 
     def assert_form_is_disabled(self, form):
@@ -475,7 +470,41 @@ class TestFilterSetFormAdaptation:
 
         # Expect all 'stocked_on' fields to be hidden.
         assert all(
-            isinstance(form.fields[fn].widget, forms.HiddenInput)
-            for fn in form.fields
-            if fn.startswith('stocked_on')
+            isinstance(form.fields[fn].widget, forms.HiddenInput) for fn in form.fields if fn.startswith('stocked_on')
         )
+
+    def test_with_MultiValueField(self):
+
+        class ParticipantFilterSet(FilterSet):
+            onboarded = Filter(DateRangeLookup("range", label="between"), label="Onboarded")
+
+            class Meta:
+                model = Participant
+                fields = {
+                    'name': ['icontains'],
+                    'age': ['exact', 'gte'],
+                }
+
+        filterset_cls, filter_form_cls = self.make_em(ParticipantFilterSet)
+        filterset = filterset_cls(['and', [['name', {'lookup': 'icontains', 'value': 'foo'}]]])
+        data = {
+            'name__icontains': 'bar',
+            'age__gte': '50',
+            'onboarded__range_0': '2026-05-08',
+            'onboarded__range_1': '2026-04-26',
+        }
+
+        # Target
+        form = filter_form_cls(filterset, data=data)
+        assert not form.errors  # Triggers cleaning and validation
+
+        expected_query_data = [
+            'and',
+            [
+                ['age', {'lookup': 'gte', 'value': '50'}],
+                ['name', {'lookup': 'icontains', 'value': 'bar'}],
+                ['onboarded', {'lookup': 'range', 'value': ['2026-05-08', '2026-04-26']}],
+            ],
+        ]
+        assert form.filterset.query_data[0] == expected_query_data[0]
+        assert sorted(form.filterset.query_data[1]) == expected_query_data[1]
