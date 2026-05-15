@@ -87,7 +87,7 @@ class TestLookupToFormField:
         assert form_field.queryset.model is Study
 
     def test_DateRangeLookup(self):
-        lookup = DateRangeLookup("range", label="between")
+        lookup = DateRangeLookup(label="between")
         filter = Filter(lookup, label="Created")
         filter = filter.bind("created")
 
@@ -476,7 +476,7 @@ class TestFilterSetFormAdaptation:
     def test_with_MultiValueField(self):
 
         class ParticipantFilterSet(FilterSet):
-            onboarded = Filter(DateRangeLookup("range", label="between"), label="Onboarded")
+            onboarded = Filter(DateRangeLookup(label="between"), label="Onboarded")
 
             class Meta:
                 model = Participant

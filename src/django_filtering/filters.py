@@ -168,6 +168,10 @@ class DateRangeLookup(Lookup):
 
     type = 'date-range'
 
+    def __init__(self, *args, **kwargs):
+        kwargs['name'] = 'range'
+        super().__init__(*args, **kwargs)
+
     # At this time there is no reason to _clean_ the value
     # and turn it into a `datetime.date`.
     # The database is capable of casting a string to its native date type
@@ -175,19 +179,7 @@ class DateRangeLookup(Lookup):
 
     def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
         filter = context['filter']
-        # FIXME Use the `range` lookup, but enforce the lookup name as `range` prior to making this change.
-        return Q(
-            construct_field_lookup_arg(
-                filter.name,
-                criteria['value'][0],
-                'gte',
-            ),
-            construct_field_lookup_arg(
-                filter.name,
-                criteria['value'][1],
-                'lte',
-            ),
-        )
+        return Q((f"{filter.name}__range", criteria['value']))
 
     def as_form_field(self, filterset_cls, filter) -> forms.Field:
         field_kwargs = {

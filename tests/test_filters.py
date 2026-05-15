@@ -147,7 +147,7 @@ class TestDateRangeLookup:
     """
 
     def test(self):
-        lookup_name = 'rangez'
+        lookup_name = 'range'
         label = "between"
         field = models.DateField()
         filter = mock.Mock()
@@ -155,7 +155,7 @@ class TestDateRangeLookup:
         d1, d2 = [datetime.date(2025, 1, 1), datetime.date(2025, 8, 31)]
 
         # Target
-        lookup = filters.DateRangeLookup(lookup_name, label=label)
+        lookup = filters.DateRangeLookup(label=label)
 
         # Check options schema output
         options_schema_blurb = lookup.get_options_schema_definition(field)
@@ -175,10 +175,13 @@ class TestDateRangeLookup:
 
         # Check the transmutation of the criteria to Q instance.
         expected = models.Q(
-            **{
-                f'{filter.name}__gte': d1.isoformat(),
-                f'{filter.name}__lte': d2.isoformat(),
-            }
+            (
+                f'{filter.name}__{lookup_name}',
+                (
+                    d1.isoformat(),
+                    d2.isoformat(),
+                ),
+            )
         )
         assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
 

@@ -15,7 +15,7 @@ class ProductFilterSet(filtering.FilterSet):
         label="Category",
     )
     stocked_on = filtering.Filter(
-        filtering.DateRangeLookup('range', label="between"),
+        filtering.DateRangeLookup(label="between"),
         filtering.InputLookup('year__gte', label="year >="),
         label="Stocked",
     )
@@ -29,9 +29,7 @@ class ProductFilterSet(filtering.FilterSet):
     )
 
     is_in_stock = filtering.Filter(
-        filtering.ChoiceLookup(
-            'exact', label=":", choices=[(True, "Yes"), (False, "No")]
-        ),
+        filtering.ChoiceLookup('exact', label=":", choices=[(True, "Yes"), (False, "No")]),
         label="Is in stock?",
     )
 
