@@ -6,15 +6,16 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, Model, Q
 
 from .conf import configurator
-from .forms.fields import DateRangeField
+from .forms.fields import DateRangeField, PartialDateRangeField
 from .utils import construct_field_lookup_arg, deconstruct_query
 
 
 __all__ = (
     'ChoiceLookup',
     'DateRangeLookup',
-    'InputLookup',
     'Filter',
+    'InputLookup',
+    'PartialDateRangeLookup',
     'STICKY_SOLVENT_VALUE',
 )
 
@@ -186,6 +187,51 @@ class DateRangeLookup(Lookup):
             'required': False,
         }
         return DateRangeField(**field_kwargs)
+
+
+class PartialDateRangeLookup(DateRangeLookup):
+    """
+    Lookup by a partial or complete date range, where the inputs are start and end values.
+    The ``QuerySet.filter`` argument uses the ``date__gte`` & ``date__lte`` lookups;
+    unless both start and end values are given, then the ``range`` lookup is used.
+
+    This differs from the ``DateRangeLookup`` because it allows for either the start or end value to be left blank.
+    """
+
+    type = 'partial-date-range'
+
+    # At this time there is no reason to _clean_ the value
+    # and turn it into a `datetime.date`.
+    # The database is capable of casting a string to its native date type
+    # as long we enforce iso 8601 formatting.
+
+    def transmute(self, criteria: dict[str, Any], context: dict[str, Any]) -> Q | None:
+        filter = context['filter']
+        start, end = criteria['value']
+        if start and end:
+            return super().transmute(criteria, context)
+        elif start:
+            return Q(
+                construct_field_lookup_arg(
+                    filter.name,
+                    start,
+                    'date__gte',
+                ),
+            )
+        else:
+            return Q(
+                construct_field_lookup_arg(
+                    filter.name,
+                    end,
+                    'date__lte',
+                ),
+            )
+
+    def as_form_field(self, filterset_cls, filter) -> forms.Field:
+        field_kwargs = {
+            'required': False,
+        }
+        return PartialDateRangeField(**field_kwargs)
 
 
 # A sentry value used to signal when the user has selected

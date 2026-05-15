@@ -143,7 +143,7 @@ class TestChoiceLookup:
 
 class TestDateRangeLookup:
     """
-    Testing the InputLookup
+    Testing the DateRangeLookup
     """
 
     def test(self):
@@ -160,6 +160,129 @@ class TestDateRangeLookup:
         # Check options schema output
         options_schema_blurb = lookup.get_options_schema_definition(field)
         expected = {'type': 'date-range', 'label': label}
+        assert options_schema_blurb == expected
+
+        # Check the cleaning of the values in the filter criteria
+        dirty_criteria = {
+            'value': [d1.isoformat(), d2.isoformat()],
+            'lookup': lookup_name,
+        }
+        cleaned_criteria = {
+            'value': [d1.isoformat(), d2.isoformat()],
+            'lookup': lookup_name,
+        }
+        assert lookup.clean(dirty_criteria) == cleaned_criteria
+
+        # Check the transmutation of the criteria to Q instance.
+        expected = models.Q(
+            (
+                f'{filter.name}__{lookup_name}',
+                (
+                    d1.isoformat(),
+                    d2.isoformat(),
+                ),
+            )
+        )
+        assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
+
+    @pytest.mark.skip(reason="not yet implemented")
+    def test_validation(self):
+        # Check the validation of jsonschema 'date' format
+        # Note, `format` validation requires explicit configuration in jsonschema.
+        pass
+
+
+class TestPartialDateRangeLookup:
+    """
+    Testing the PartialDateRangeLookup
+    """
+
+    def test_with_only_start_value(self):
+        lookup_name = 'date__gte'
+        label = "between"
+        field = models.DateField()
+        filter = mock.Mock()
+        filter.name = 'created'
+        d1, _ = [datetime.date(2025, 1, 1), None]
+
+        # Target
+        lookup = filters.PartialDateRangeLookup(label=label)
+
+        # Check options schema output
+        options_schema_blurb = lookup.get_options_schema_definition(field)
+        expected = {'type': 'partial-date-range', 'label': label}
+        assert options_schema_blurb == expected
+
+        # Check the cleaning of the values in the filter criteria
+        dirty_criteria = {
+            'value': [d1.isoformat(), None],
+            'lookup': lookup_name,
+        }
+        cleaned_criteria = {
+            'value': [d1.isoformat(), None],
+            'lookup': lookup_name,
+        }
+        assert lookup.clean(dirty_criteria) == cleaned_criteria
+
+        # Check the transmutation of the criteria to Q instance.
+        expected = models.Q(
+            (
+                f'{filter.name}__{lookup_name}',
+                d1.isoformat(),
+            )
+        )
+        assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
+
+    def test_with_only_end_value(self):
+        lookup_name = 'date__lte'
+        label = "between"
+        field = models.DateField()
+        filter = mock.Mock()
+        filter.name = 'created'
+        _, d2 = [None, datetime.date(2025, 8, 31)]
+
+        # Target
+        lookup = filters.PartialDateRangeLookup(label=label)
+
+        # Check options schema output
+        options_schema_blurb = lookup.get_options_schema_definition(field)
+        expected = {'type': 'partial-date-range', 'label': label}
+        assert options_schema_blurb == expected
+
+        # Check the cleaning of the values in the filter criteria
+        dirty_criteria = {
+            'value': [None, d2.isoformat()],
+            'lookup': lookup_name,
+        }
+        cleaned_criteria = {
+            'value': [None, d2.isoformat()],
+            'lookup': lookup_name,
+        }
+        assert lookup.clean(dirty_criteria) == cleaned_criteria
+
+        # Check the transmutation of the criteria to Q instance.
+        expected = models.Q(
+            (
+                f'{filter.name}__{lookup_name}',
+                d2.isoformat(),
+            )
+        )
+        assert lookup.transmute(cleaned_criteria, context={'filter': filter}) == expected
+
+    def test_with_start_and_end_values(self):
+        lookup_name = 'range'
+        label = "between"
+        field = models.DateField()
+        filter = mock.Mock()
+        filter.name = 'created'
+        d1, d2 = [datetime.date(2025, 1, 1), datetime.date(2025, 8, 31)]
+
+        # Target
+        lookup = filters.PartialDateRangeLookup(label=label)
+
+        # Check options schema output
+        options_schema_blurb = lookup.get_options_schema_definition(field)
+        expected = {'type': 'partial-date-range', 'label': label}
         assert options_schema_blurb == expected
 
         # Check the cleaning of the values in the filter criteria

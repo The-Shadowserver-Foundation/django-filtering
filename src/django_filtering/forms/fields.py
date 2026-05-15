@@ -23,3 +23,9 @@ class DateRangeField(forms.MultiValueField):
         if start and end:
             return slice(start, end)
         return slice(start, end)
+
+
+class PartialDateRangeField(DateRangeField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('require_all_fields', False)
+        super().__init__(*args, **kwargs)
