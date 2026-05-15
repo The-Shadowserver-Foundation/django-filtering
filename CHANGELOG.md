@@ -1,6 +1,22 @@
+## 0.4.0 - 2026-May-15
+
+- Fixed: wheel and sdist builds to include Django templates
+- Changed: Require Python >= 3.10
+- Added: PartialDateRangeLookup for filtering by only part of the range
+- Fixed: DateRangeLookup to use the range lookup rather than date
+- Fixed: Resolved design flaw in lookup as multiple form fields
+- Fixed: Addressed `ruff` errors and increase max line-length
+- Fixed: variable name typo in `filters_for_model` generation
+- Updated: `ruff-pre-commit`
+- Changed: Use the plural module naming convention typically used across Python packages
+- Changed: Allow assignment of base class in flat form factory
+- Changed: Move form module to package to allow space for additional logic
+- Fixed: Made `filterset_factory` minimally functional
+- Fixed: Correct flat form initial values for stick filters
+
 ## 0.3.2 - 2025-Dec-15
 
-- Fixed: Corrected the choice form field generation for manytomany relational field (i.e. reverse relational field).
+- Fixed: Corrected the choice form field generation for many-to-many relational field (i.e. reverse relational field).
 
 ## 0.3.1 - 2025-Dec-15
 
