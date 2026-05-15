@@ -30,10 +30,11 @@ Homepage = "https://github.com/The-Shadowserver-Foundation/django-filtering"
 Issues = "https://github.com/The-Shadowserver-Foundation/django-filtering/issues"
 
 [tool.hatch.build.targets.sdist]
+artifacts = ["src/django_filtering/templates"]
 exclude = [".*/*"]
 
-
 [tool.hatch.build.targets.wheel]
+artifacts = ["src/django_filtering/templates"]
 only-packages = true
 
 [tool.pytest.ini_options]
