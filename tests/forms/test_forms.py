@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+import pytest
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
@@ -10,7 +11,7 @@ from django_filtering.filters import (
     InputLookup,
 )
 from django_filtering.filterset import FilterSet
-from django_filtering.forms import flat_filtering_form_factory
+from django_filtering.forms import FlatFilteringForm, flat_filtering_form_factory
 from django_filtering.forms.fields import DateRangeField
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
 from tests.lab_app.models import Participant, Study
@@ -100,6 +101,17 @@ class TestLookupToFormField:
 class TestFilterSetFormAdaptation:
     def make_em(self, FilterSet, **kwargs):
         return FilterSet, flat_filtering_form_factory(FilterSet, **kwargs)
+
+    def test_call_with_invalid_bases(self):
+        with pytest.raises(TypeError) as caught_exc:
+            FilterSet, Form = self.make_em(StudyFilterSet, bases=())
+        assert (
+            caught_exc.value.args[0] == "One of the given base classes must be FlatFilteringForm or a subclass of it."
+        )
+
+    def test_call_with_base_class(self):
+        _, Form = self.make_em(StudyFilterSet, bases=FlatFilteringForm)
+        assert issubclass(Form, FlatFilteringForm)
 
     def test_blank(self):
         FilterSet, Form = self.make_em(StudyFilterSet)

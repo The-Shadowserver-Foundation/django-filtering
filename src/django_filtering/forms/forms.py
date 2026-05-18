@@ -12,6 +12,7 @@ from ..utils import construct_field_lookup_arg, deconstruct_field_lookup_arg
 
 if TYPE_CHECKING:
     from ..filters import Filter
+    from ..filterset import FilterSet
 
 
 __all__ = (
@@ -251,7 +252,11 @@ class FlatFilteringForm(forms.Form):
             self.filterset.query_data = []
 
 
-def flat_filtering_form_factory(filterset_cls, bases=(FlatFilteringForm,), hidden_fields=None):
+def flat_filtering_form_factory(
+    filterset_cls: FilterSet,
+    bases: type | tuple[type, ...] | None = None,
+    hidden_fields: list[str] | None = None,
+):
     """
     Factory for creating a form
     that can be used with one level of nested query data.
@@ -261,8 +266,13 @@ def flat_filtering_form_factory(filterset_cls, bases=(FlatFilteringForm,), hidde
     """
     if hidden_fields is None:
         hidden_fields = []
-    if not any(issubclass(base, FlatFilteringForm) for base in bases):
-        raise TypeError(f"None of the given bases is or derives from {FlatFilteringForm.__name__}")
+
+    if bases is None:
+        bases = (FlatFilteringForm,)
+    if not isinstance(bases, tuple):
+        bases = (bases,)
+    elif not any(issubclass(base, FlatFilteringForm) for base in bases):
+        raise TypeError(f"One of the given base classes must be {FlatFilteringForm.__name__} or a subclass of it.")
 
     form_attrs = {}
     for filter in filterset_cls._meta.filters.values():
