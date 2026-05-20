@@ -520,3 +520,22 @@ class TestFilterSetFormAdaptation:
         ]
         assert form.filterset.query_data[0] == expected_query_data[0]
         assert sorted(form.filterset.query_data[1]) == expected_query_data[1]
+
+    def test_invalid_form_stops_translation_to_filterset(self, mocker):
+        """
+        Check that we stop translation when the form contains errors (i.e. invalid).
+        When there are errors, the changed field's cleaned data may not be present.
+        """
+        data = {
+            'continent__exact': 'ZZ',  # invalid option
+        }
+        FilterSet, Form = self.make_em(StudyFilterSet)
+
+        filterset = FilterSet()
+        form = Form(filterset, data=data)
+
+        spy = mocker.spy(form, '_translate_to_filterset')
+        # Expect the form to have caught the validation error.
+        assert 'continent__exact' in form.errors
+        # Expect the translation to not have executed due to the presents of errors.
+        spy.assert_not_called()

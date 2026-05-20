@@ -212,7 +212,10 @@ class FlatFilteringForm(forms.Form):
                 None,
                 ("The form is disabled when nested filters or non-'and' operations are used."),
             )
+        if not self._errors:
+            self._translate_to_filterset()
 
+    def _translate_to_filterset(self):
         # If necessary, initialize the query data structure.
         if len(self.filterset.query_data) == 0:
             # FIXME Initializing this structure, only to then maybe erase it
