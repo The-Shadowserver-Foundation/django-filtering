@@ -217,9 +217,7 @@ class FlatFilteringForm(forms.Form):
 
     def _translate_to_filterset(self):
         # If necessary, initialize the query data structure.
-        if len(self.filterset.query_data) == 0:
-            # FIXME Initializing this structure, only to then maybe erase it
-            #       at the end of this method is not great.
+        if not self.filterset.has_query_data:
             self.filterset.query_data = ['and', []]
 
         for field_name in self.changed_data:

@@ -328,6 +328,14 @@ class FilterSet(metaclass=FilterSetType):
                 }
             )
 
+    @property
+    def has_query_data(self) -> bool:
+        """
+        Convenience property to indicate whether there is query-data present.
+        """
+        q = self.query_data
+        return bool(q and len(q) == 2 and q[1])
+
     def get_query(self, queryset) -> Q | None:
         """Q object derived from query data. Only available after validation."""
         q = self._transmute(self.query_data, queryset)
