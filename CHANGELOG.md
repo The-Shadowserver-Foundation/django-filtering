@@ -1,3 +1,9 @@
+## 0.5.0 - 2026-May-24
+
+- Added: FilterSet.has_query_data property provides a convenience check for the presents of query-data.
+- Fixed: Translation behavior of flat form to only translate when there are no errors.
+- Fixed: Argument assignment for flat filtering form factory's base class.
+
 ## 0.4.0 - 2026-May-15
 
 - Fixed: wheel and sdist builds to include Django templates
