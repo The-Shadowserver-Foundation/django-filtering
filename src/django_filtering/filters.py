@@ -5,7 +5,7 @@ from django import forms
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import Field, Model, Q
 
-from .conf import configurator
+from .conf import configurator, settings
 from .forms.fields import DateRangeField, PartialDateRangeField
 from .utils import construct_field_lookup_arg, deconstruct_query
 
@@ -114,11 +114,8 @@ class ChoiceLookup(SingleFieldLookup):
     def __hash__(self):
         return hash(str(super().__hash__()) + str(self._choices))
 
-    def get_options_schema_definition(self, field=None):
-        definition = super().get_options_schema_definition(field)
-        choices = None
-
-        # Use the field's choices or the developer defined choices
+    def _get_choices(self, field: Field | None = None, include_blank: bool = False):
+        # Use the developer defined choices or model field's choices
         if self._choices is None:
             if field is None:
                 raise RuntimeError(
@@ -127,11 +124,16 @@ class ChoiceLookup(SingleFieldLookup):
                     f"because '{self.name}' is not a field on the model."
                 )
             else:
-                choices = list(field.get_choices(include_blank=False))
+                return list(field.get_choices(include_blank=include_blank, blank_choice=settings.BLANK_CHOICE))
         else:
             choices = self._choices(lookup=self, field=field) if callable(self._choices) else self._choices
+            if include_blank:
+                choices = settings.BLANK_CHOICE + list(choices)
+            return choices
 
-        definition['choices'] = choices
+    def get_options_schema_definition(self, field=None):
+        definition = super().get_options_schema_definition(field)
+        definition['choices'] = self._get_choices(field=field, include_blank=False)
         return definition
 
     def as_form_field(self, filterset_cls, filter) -> forms.Field:
@@ -139,8 +141,9 @@ class ChoiceLookup(SingleFieldLookup):
             'required': False,
             'label': f"{filter.label} {self.label}",
         }
+        include_blank = not filter.is_sticky
         if self._choices:
-            field_kwargs['choices'] = self._choices
+            field_kwargs['choices'] = self._get_choices(include_blank=include_blank)
             field = forms.ChoiceField(**field_kwargs)
         else:
             model_field = filter.resolve_field(
@@ -153,12 +156,12 @@ class ChoiceLookup(SingleFieldLookup):
             )
             if hasattr(model_field, 'choices') and model_field.choices is not None:
                 # Use choices defined on the field
-                field_kwargs['choices'] = model_field.get_choices()
+                field_kwargs['choices'] = self._get_choices(field=model_field, include_blank=include_blank)
                 field = forms.ChoiceField(**field_kwargs)
             else:
                 # Use relation choices
                 qs = model_field.remote_field.model._default_manager.get_queryset()
-                field = forms.ModelChoiceField(qs, **field_kwargs)
+                field = forms.ModelChoiceField(qs, empty_label=settings.BLANK_CHOICE[0][1], **field_kwargs)
         return field
 
 

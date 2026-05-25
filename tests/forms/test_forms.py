@@ -4,6 +4,7 @@ import pytest
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
+from django_filtering.conf import settings
 from django_filtering.filters import (
     ChoiceLookup,
     DateRangeLookup,
@@ -40,7 +41,7 @@ class TestLookupToFormField:
         assert len(form_fields) == 1
         form_field = form_fields[f"{filter.name}__{lookup.name}"]
         assert isinstance(form_field, forms.ChoiceField)
-        assert form_field.choices == choices
+        assert form_field.choices == settings.BLANK_CHOICE + choices
 
     def test_ChoiceLookup__from_field_choices(self):
         class TestFilterSet(StudyFilterSet):
@@ -53,7 +54,7 @@ class TestLookupToFormField:
         form_fields = filter.as_form_fields(TestFilterSet)
         assert len(form_fields) == 1
         form_field = form_fields[f"{filter.name}__{lookup.name}"]
-        # Expect an instance of ModelChoiceField with queryset for choices.
+        # Expect an instance of ChoiceField
         assert isinstance(form_field, forms.ChoiceField)
         assert form_field.choices == model._meta.get_field('state').get_choices()
 
@@ -69,6 +70,7 @@ class TestLookupToFormField:
         form_field = form_fields[f"{filter.name}__{lookup.name}"]
         # Expect an instance of ModelChoiceField with queryset for choices.
         assert isinstance(form_field, forms.ModelChoiceField)
+        assert form_field.empty_label == settings.BLANK_CHOICE[0][1]
         # No need to test for the queryset, because ModelChoiceField
         # init is strict with this requirement.
 
@@ -86,6 +88,19 @@ class TestLookupToFormField:
         assert isinstance(form_field, forms.ModelChoiceField)
         # Test the queryset is using the correct model
         assert form_field.queryset.model is Study
+
+    def test_ChoiceLookup__for_sticky_filter(self):
+        filter = TopBrandKitchenProductFilterSet._meta.filters['brand']
+        lookup = filter.lookups[0]
+        assert isinstance(lookup, ChoiceLookup)  # to verify it wasn't accidentally changed.
+
+        form_fields = filter.as_form_fields(TopBrandKitchenProductFilterSet)
+        assert len(form_fields) == 1
+        form_field = form_fields[f"{filter.name}__{lookup.name}"]
+        # Expect an instance of ChoiceField
+        assert isinstance(form_field, forms.ChoiceField)
+        # Expect there not to be a blank choice, because this is a sticky filter
+        assert form_field.choices == TopBrandKitchenProductFilterSet.BRAND_CHOICES
 
     def test_DateRangeLookup(self):
         lookup = DateRangeLookup(label="between")

@@ -1,4 +1,5 @@
 from django.conf import settings as django_settings
+from django.db.models.fields import BLANK_CHOICE_DASH
 
 
 _APP_SETTINGS_KEY = 'DJANGO_FILTERING'
@@ -36,6 +37,7 @@ DEFAULT_LOOKUP_LABELS = {
 }
 DEFAULTS = {
     "LOOKUP_LABELS": DEFAULT_LOOKUP_LABELS,
+    "BLANK_CHOICE": BLANK_CHOICE_DASH,
 }
 
 
