@@ -143,7 +143,7 @@ class ChoiceLookup(SingleFieldLookup):
             field_kwargs['choices'] = self._choices
             field = forms.ChoiceField(**field_kwargs)
         else:
-            model_field = filter._resolve_field(
+            model_field = filter.resolve_field(
                 context={
                     'filterset': filterset_cls,
                     'filter': filter,
@@ -325,7 +325,7 @@ class Filter:
             return self.transmute({'value': self.sticky_value}, context=context)
         return None
 
-    def _resolve_field(
+    def resolve_field(
         self,
         context: dict[str, Any],
         lookup: Lookup | list[str],
@@ -341,10 +341,10 @@ class Filter:
         In those simple cases the filter's field is resolved using the filter's name.
         ``None`` is returned when the filter name does not reference a model field.
 
-        Further resolution may be necesary
+        Further resolution may be necessary
         when the filter's name references a relational field.
-        The lookup expression for a relational field may be sub-fields
-        of the related model; or in extreme cases additional sub-field references.
+        The lookup expression for a relational field may be subfields
+        of the related model; or in extreme cases additional subfield references.
         In this situation the field is resolved
         to the deepest referenced field in the lookup expression.
 
@@ -365,7 +365,7 @@ class Filter:
             current_lookup_name = lookup.pop(0)
             if not field.get_lookup(current_lookup_name):
                 # Assume it is a field reference
-                field = self._resolve_field(
+                field = self.resolve_field(
                     context,
                     lookup,
                     model=field.related_model,
@@ -379,7 +379,7 @@ class Filter:
 
         lookups = {}
         for lu in self.lookups:
-            field = self._resolve_field(context, lu)
+            field = self.resolve_field(context, lu)
             lookups[lu.name] = lu.get_options_schema_definition(field)
             info["lookups"] = lookups
             if hasattr(field, "help_text") and field.help_text:
