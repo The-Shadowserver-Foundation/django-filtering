@@ -1,3 +1,8 @@
+## 0.6.0 - 2026-May-26
+
+- Changed: Ensure blank option in form field choices and define empty choice.
+- Changed: Make Filter.resolve_field a public method.
+
 ## 0.5.0 - 2026-May-24
 
 - Added: FilterSet.has_query_data property provides a convenience check for the presents of query-data.
