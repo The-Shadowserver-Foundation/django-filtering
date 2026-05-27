@@ -41,7 +41,7 @@ def deconstruct_field_lookup_arg(
     Given a field name with lookup value,
     deconstruct it into a __query data__ structure.
     """
-    split_info = field_lookup.split("__", 1)
+    split_info = field_lookup.rsplit("__", 1)
     name = split_info.pop(0)
     lookup = 'exact' if len(split_info) == 0 else split_info.pop()
     opts = {'value': value, 'lookup': lookup}
