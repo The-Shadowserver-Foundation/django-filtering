@@ -1,3 +1,7 @@
+## 0.6.1 - 2026-May-26
+
+- Fixed: Corrects parsing of relational form filter field names to filter lookup names.
+
 ## 0.6.0 - 2026-May-26
 
 - Changed: Ensure blank option in form field choices and define empty choice.
