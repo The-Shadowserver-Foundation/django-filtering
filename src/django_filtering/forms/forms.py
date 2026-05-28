@@ -205,11 +205,6 @@ class FlatFilteringForm(forms.Form):
 
     def __get_field_name_and_value(self, q_item):
         field_name, value = construct_field_lookup_arg(q_item[0], **q_item[1])
-        # Some form fields that are 'exact' matching do not use the '__exact' lookup
-        # suffix. So we compare the constructed field_name with actual field names.
-        if q_item[1].get('lookup', None) == 'exact' and field_name not in self.fields:
-            # Essentially drops the `__exact` lookup suffix.
-            field_name = q_item[0]
         return field_name, value
 
     def _format_value(self, field_name, value):
