@@ -1,3 +1,8 @@
+## 0.6.2 - 2026-May-28
+
+- Fixed: Remove flat form's automagic interpretation of a lookup
+- Fixed: Map form fields to filter and lookup for correct deconstruction
+
 ## 0.6.1 - 2026-May-26
 
 - Fixed: Corrects parsing of relational form filter field names to filter lookup names.
