@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import fnmatch
 from functools import cached_property
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
-from ..utils import construct_field_lookup_arg, deconstruct_field_lookup_arg
+from ..utils import QueryDataVar, construct_field_lookup_arg
 
 
 if TYPE_CHECKING:
@@ -123,9 +123,35 @@ class FlatFilteringForm(forms.Form):
 
         return True
 
+    @cached_property
+    def form_field_to_filter_lookup(self) -> dict[str, tuple[str, str]]:
+        """
+        Mapping of form field names to filter and lookup names.
+        This is used to split form field names (e.g. `facility__managed_by__name__icontains`)
+        where the filter and lookup names may be ambiguous.
+        """
+        mapping = {}
+        for filter in self.filterset.filters:
+            for lookup in filter.lookups:
+                field_name = filter.get_form_field_name(lookup)
+                mapping[field_name] = (
+                    filter.name,
+                    lookup.name,
+                )
+        return mapping
+
     def __get_filter_by_field_name(self, field_name) -> Filter:
         filter_name, lookup_exp = field_name.split('__', 1)
         return self.filterset.get_filter(filter_name)
+
+    def __deconstruct_field_data(self, field_name: str, value: Any) -> QueryDataVar:
+        """
+        Given a field name and value from cleaned_data, produce a query-data item.
+        """
+        # Reformat the value to base string form for query data usage.
+        formatted_value = self._format_value(field_name, value)
+        filter_name, lookup_name = self.form_field_to_filter_lookup[field_name]
+        return [filter_name, {'lookup': lookup_name, 'value': formatted_value}]
 
     def _populate_initial_from_filterset(self):
         """
@@ -236,11 +262,8 @@ class FlatFilteringForm(forms.Form):
                 del self.filterset.query_data[1][condition_field_names.index(field_name)]
                 continue
 
-            # Reformat the value to base string form for query data usage.
-            formatted_value = self._format_value(field_name, value)
             # Insert or update field in query data.
-            field_as_q_value = deconstruct_field_lookup_arg(field_name, formatted_value)
-
+            field_as_q_value = self.__deconstruct_field_data(field_name, value)
             if field_name not in condition_field_names:
                 conditions.append(field_as_q_value)
             else:

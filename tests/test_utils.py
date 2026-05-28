@@ -2,7 +2,6 @@ from django.db.models import Q
 
 from django_filtering.utils import (
     construct_field_lookup_arg,
-    deconstruct_field_lookup_arg,
     deconstruct_query,
     merge_dicts,
 )
@@ -42,11 +41,3 @@ def test_deconstruct_query():
 
     expected = ['name', {'lookup': 'icontains', 'value': 'foo'}]
     assert deconstruct_query(Q(name__icontains='foo')) == expected
-
-
-def test_deconstruct_field_lookup_arg():
-    expected = ['name', {'lookup': 'icontains', 'value': 'foo'}]
-    assert deconstruct_field_lookup_arg('name__icontains', 'foo') == expected
-
-    expected = ['relation__attr', {'lookup': 'exact', 'value': '1'}]
-    assert deconstruct_field_lookup_arg('relation__attr__exact', '1') == expected

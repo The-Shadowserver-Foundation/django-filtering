@@ -554,3 +554,102 @@ class TestFilterSetFormAdaptation:
         assert 'continent__exact' in form.errors
         # Expect the translation to not have executed due to the presents of errors.
         spy.assert_not_called()
+
+    def sort_query_data_items(self, query_data):
+        def gen_sort_key(x):
+            return f"{x[0]}-{x[1]['lookup']}-{x[1]['value']}"
+
+        return sorted(query_data[1], key=gen_sort_key)
+
+    def test_relational_attribute_filter(self, mocker):
+        """
+        Ensure we are able to correctly map the form field to the filter
+        given a filter name that contains the attribute name on the referenced model.
+        """
+
+        class ParticipantFilterSet(FilterSet):
+            facility__max_occupancy = Filter(
+                InputLookup('exact', label="is"),
+                InputLookup('gte', label="greater than or equal to"),
+                InputLookup('lte', label="less than or equal to"),
+                label="Facility max occupancy",
+            )
+
+            class Meta:
+                model = Participant
+                fields = {
+                    'name': ['icontains'],
+                    'age': ['exact', 'gte'],
+                    'facility__max_occupancy': ['exact', 'gte', 'lte'],
+                }
+
+        filterset_cls, filter_form_cls = self.make_em(ParticipantFilterSet)
+        filterset = filterset_cls()
+        data = {
+            'name__icontains': 'bar',
+            'age__gte': '50',
+            'facility__max_occupancy__gte': '12',
+            'facility__max_occupancy__lte': '20',
+        }
+
+        # Target
+        form = filter_form_cls(filterset, data=data)
+        assert not form.errors  # Triggers cleaning and validation
+
+        expected_query_data = [
+            'and',
+            [
+                ['age', {'lookup': 'gte', 'value': '50'}],
+                ['facility__max_occupancy', {'lookup': 'gte', 'value': '12'}],
+                ['facility__max_occupancy', {'lookup': 'lte', 'value': '20'}],
+                ['name', {'lookup': 'icontains', 'value': 'bar'}],
+            ],
+        ]
+        assert form.filterset.query_data[0] == expected_query_data[0]
+        assert self.sort_query_data_items(form.filterset.query_data) == expected_query_data[1]
+
+    def test_relational_filter_with_attribute_in_lookup(self, mocker):
+        """
+        Ensure we are able to correctly map the form field to the filter
+        given a filter name is a relational field and the lookup references
+        an attribute name on the referenced model along with the lookup.
+        """
+
+        class ParticipantFilterSet(FilterSet):
+            facility = Filter(
+                InputLookup('max_occupancy__gte', label="max occupancy greater than or equal to"),
+                InputLookup('managed_by__name__icontains', label="managed by name contains"),
+                label="Facility",
+            )
+
+            class Meta:
+                model = Participant
+                fields = {
+                    'name': ['icontains'],
+                    'age': ['exact', 'gte'],
+                }
+
+        filterset_cls, filter_form_cls = self.make_em(ParticipantFilterSet)
+        filterset = filterset_cls()
+        data = {
+            'name__icontains': 'bar',
+            'age__gte': '50',
+            'facility__max_occupancy__gte': '12',
+            'facility__managed_by__name__icontains': 'jess',
+        }
+
+        # Target
+        form = filter_form_cls(filterset, data=data)
+        assert not form.errors  # Triggers cleaning and validation
+
+        expected_query_data = [
+            'and',
+            [
+                ['age', {'lookup': 'gte', 'value': '50'}],
+                ['facility', {'lookup': 'managed_by__name__icontains', 'value': 'jess'}],
+                ['facility', {'lookup': 'max_occupancy__gte', 'value': '12'}],
+                ['name', {'lookup': 'icontains', 'value': 'bar'}],
+            ],
+        ]
+        assert form.filterset.query_data[0] == expected_query_data[0]
+        assert self.sort_query_data_items(form.filterset.query_data) == expected_query_data[1]
