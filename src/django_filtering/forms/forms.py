@@ -5,6 +5,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Any
 
 from django import forms
+from django.forms.fields import BaseTemporalField
 from django.utils.datastructures import MultiValueDict
 
 from ..utils import QueryDataVar, construct_field_lookup_arg
@@ -207,25 +208,29 @@ class FlatFilteringForm(forms.Form):
         field_name, value = construct_field_lookup_arg(q_item[0], **q_item[1])
         return field_name, value
 
+    def __format_field_value(self, field, value):
+        """
+        Format's a form field's value to a query data compatible value.
+        """
+        if isinstance(field, forms.MultiValueField):
+            if not isinstance(field.widget, forms.MultiWidget):
+                raise NotImplementedError()
+            values = field.widget.decompress(value)
+            return [self.__format_field_value(sub_field, values[i]) for i, sub_field in enumerate(field.fields)]
+        elif isinstance(field, BaseTemporalField):
+            # Dates and times in ISO8601 format are preferred, because they are compatible
+            # throughout the system (from frontend to backend).
+            return field.widget.format_value(value)
+        else:
+            return field.to_python(value)
+
     def _format_value(self, field_name, value):
         """
         Format a cleaned value. This is primarily used during translation
         from cleaned data to query data.
         """
         field = self.fields[field_name]
-        # Handle the cases where the widget formats the value incorrectly
-        # for django-filtering usage.
-        if isinstance(field, forms.MultiValueField):
-            if not isinstance(field.widget, forms.MultiWidget):
-                raise NotImplementedError()
-            values = field.widget.decompress(value)
-            return [sub_field.widget.format_value(values[i]) for i, sub_field in enumerate(field.fields)]
-        elif isinstance(field.widget, forms.Select):
-            if field.widget.allow_multiple_selected:
-                raise NotImplementedError()
-            return field.widget.format_value(value)[0]
-        else:
-            return field.widget.format_value(value)
+        return self.__format_field_value(field, value)
 
     def clean(self):
         if not self.is_enabled:

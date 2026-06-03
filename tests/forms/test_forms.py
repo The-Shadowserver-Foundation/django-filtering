@@ -10,6 +10,7 @@ from django_filtering.filters import (
     DateRangeLookup,
     Filter,
     InputLookup,
+    YesNoChoiceLookup,
 )
 from django_filtering.filterset import FilterSet
 from django_filtering.forms import FlatFilteringForm, flat_filtering_form_factory
@@ -608,7 +609,7 @@ class TestFilterSetFormAdaptation:
         assert form.filterset.query_data[0] == expected_query_data[0]
         assert self.sort_query_data_items(form.filterset.query_data) == expected_query_data[1]
 
-    def test_relational_filter_with_attribute_in_lookup(self, mocker):
+    def test_relational_filter_with_attribute_in_lookup(self):
         """
         Ensure we are able to correctly map the form field to the filter
         given a filter name is a relational field and the lookup references
@@ -648,6 +649,47 @@ class TestFilterSetFormAdaptation:
                 ['age', {'lookup': 'gte', 'value': '50'}],
                 ['facility', {'lookup': 'managed_by__name__icontains', 'value': 'jess'}],
                 ['facility', {'lookup': 'max_occupancy__gte', 'value': '12'}],
+                ['name', {'lookup': 'icontains', 'value': 'bar'}],
+            ],
+        ]
+        assert form.filterset.query_data[0] == expected_query_data[0]
+        assert self.sort_query_data_items(form.filterset.query_data) == expected_query_data[1]
+
+    def test_issue_with_bool_value_choices(self):
+        """
+        Ensures use of `NullBooleanField` form field in the `YesNoChoiceLookup` results in boolean type value.
+        """
+
+        class ParticipantFilterSet(FilterSet):
+            is_paid = Filter(
+                YesNoChoiceLookup(),
+                label="Is paid?",
+            )
+
+            class Meta:
+                model = Participant
+                fields = {
+                    'name': ['icontains'],
+                    'age': ['exact', 'gte'],
+                }
+
+        filterset_cls, filter_form_cls = self.make_em(ParticipantFilterSet)
+        filterset = filterset_cls()
+        data = {
+            'name__icontains': 'bar',
+            'age__gte': '50',
+            'is_paid__exact': 'True',
+        }
+
+        # Target
+        form = filter_form_cls(filterset, data=data)
+        assert not form.errors  # Triggers cleaning and validation
+
+        expected_query_data = [
+            'and',
+            [
+                ['age', {'lookup': 'gte', 'value': '50'}],
+                ['is_paid', {'lookup': 'exact', 'value': True}],
                 ['name', {'lookup': 'icontains', 'value': 'bar'}],
             ],
         ]
