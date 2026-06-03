@@ -17,6 +17,7 @@ __all__ = (
     'InputLookup',
     'PartialDateRangeLookup',
     'STICKY_SOLVENT_VALUE',
+    'YesNoChoiceLookup',
 )
 
 
@@ -162,6 +163,48 @@ class ChoiceLookup(SingleFieldLookup):
                 # Use relation choices
                 qs = model_field.remote_field.model._default_manager.get_queryset()
                 field = forms.ModelChoiceField(qs, empty_label=settings.BLANK_CHOICE[0][1], **field_kwargs)
+        return field
+
+
+class YesNoChoiceLookup(ChoiceLookup):
+    """
+    Represents a choice selection input for Boolean Yes and No choices.
+    The fi
+
+    The choices will populate from the field's choices.
+    Unless explict choices are defined via the ``choices`` argument.
+    The ``choices`` argument can be a static list of choices
+    or a function that returns a list of choices.
+
+    """
+
+    type = 'choice'
+
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('choices', None)
+        kwargs['name'] = 'exact'
+        kwargs.setdefault('label', ':')
+        super().__init__(*args, **kwargs)
+        self._choices = [(True, 'Yes'), (False, 'No')]
+
+    def __hash__(self):
+        return hash(str(super().__hash__()) + str(self._choices))
+
+    def get_options_schema_definition(self, field=None):
+        definition = super().get_options_schema_definition(field)
+        definition['choices'] = self._get_choices(field=field, include_blank=False)
+        # TODO restruct to boolean type
+        return definition
+
+    def as_form_field(self, filterset_cls, filter) -> forms.Field:
+        field_kwargs = {
+            'required': False,
+            'label': f"{filter.label} {self.label}",
+        }
+        include_blank = not filter.is_sticky
+        choices = [(None, settings.BLANK_CHOICE[0][1])] + self._choices if include_blank else self._choices
+        field_kwargs['widget'] = forms.widgets.Select(choices=choices)
+        field = forms.NullBooleanField(**field_kwargs)
         return field
 
 
