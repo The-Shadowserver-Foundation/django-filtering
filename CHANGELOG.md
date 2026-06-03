@@ -1,3 +1,8 @@
+## 0.7.0 - 2026-Jun-02
+
+- Changed: Adjust value formatting to use Python value unless the value is temporal.
+- Added: Create new Yes/No choice (`YesNoChoiceLookup`) for exact lookup on boolean field.
+
 ## 0.6.2 - 2026-May-28
 
 - Fixed: Remove flat form's automagic interpretation of a lookup
