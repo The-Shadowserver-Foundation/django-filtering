@@ -1,3 +1,7 @@
+## 0.7.1 - 2026-Jun-16
+
+- Added: Filters are now alphanumerically ordered by default and allow for `Meta.order` to customize.
+
 ## 0.7.0 - 2026-Jun-02
 
 - Changed: Adjust value formatting to use Python value unless the value is temporal.
