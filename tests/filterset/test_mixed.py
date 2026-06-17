@@ -1,5 +1,8 @@
-import pytest
+from django.db import models
 
+import django_filtering as filtering
+
+from ..market_app.filters import ProductFilterSet
 from .utils import get_filter_lookup_mapping
 
 
@@ -8,29 +11,69 @@ class TestFilterSetCreation:
     Test the construction of a FilterSet class.
     """
 
-    @pytest.mark.skip(reason="Incomplete")
     def test_mixed_filters(self):
         """
-        Tests the creation of a FilterSet with field and non-field filters.
+        Tests the creation of a FilterSet from both imperative and declarative means.
         """
 
-        # FIXME Make a new filterset that subclasses a filterset
-        #       from a model defined in this test.
+        class User(models.Model):
+            name = models.CharField(max_length=120)
+            joined_on = models.DateTimeField(auto_now_add=True)
+            biography = models.TextField()
+            interests = models.CharField(max_length=120)
+
+            class Meta:
+                app_label = 'faux_app'
+
+        class UserFilterSet(filtering.FilterSet):
+            joined_on = filtering.Filter(
+                filtering.PartialDateRangeLookup(),
+                label="Joined",
+            )
+
+            class Meta:
+                model = User
+                fields = {
+                    "name": ["icontains"],
+                    "biography": ["icontains"],
+                    "interests": ["icontains"],
+                }
 
         expected_filters = {
+            "biography": ["icontains"],
+            "interests": ["icontains"],
+            "joined_on": ["range"],
             "name": ["icontains"],
-            "continent": ["exact"],
         }
 
-        # Expect subclass to have Meta class attribute,
-        # even though the class doesn't define it.
-        assert not hasattr(filterset_cls, 'Meta')
-
-        # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
-        assert [name for name in filterset_cls._meta.filters] == list(
-            expected_filters.keys()
-        )
+        # Expect a mix of imperative and declarative filters
+        assert UserFilterSet._meta.filters.keys() == expected_filters.keys()
 
         # Check for the expected filters and lookups
-        filterset = filterset_cls()
+        filterset = UserFilterSet()
         assert get_filter_lookup_mapping(filterset) == expected_filters
+
+    def test_ordering(self):
+        """
+        Tests the creation of a FilterSet with ordered filters
+        """
+
+        class TestFilterSet(ProductFilterSet):
+            class Meta:
+                order = (
+                    'name',
+                    'category',
+                    'brand',
+                )
+
+        expected_filter_order = [
+            'name',
+            'category',
+            'brand',
+            'is_in_stock',
+            'quantity',
+            'stocked_on',
+        ]
+
+        # Expect filter ordered as defined and any remaining to be alphanumerically sorted.
+        assert list(TestFilterSet._meta.filters.keys()) == expected_filter_order

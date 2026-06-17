@@ -125,20 +125,14 @@ class TestFiltersForModel:
 
         class Manufacturer(models.Model):
             name = models.CharField(max_length=255)
-            clients = models.ManyToManyField(
-                "self", symmetrical=False, related_name="suppliers", through="Supply"
-            )
+            clients = models.ManyToManyField("self", symmetrical=False, related_name="suppliers", through="Supply")
 
             class Meta:
                 app_label = 'faux_app'
 
         class Supply(models.Model):
-            supplier = models.ForeignKey(
-                Manufacturer, models.CASCADE, related_name="supplies_given"
-            )
-            client = models.ForeignKey(
-                Manufacturer, models.CASCADE, related_name="supplies_received"
-            )
+            supplier = models.ForeignKey(Manufacturer, models.CASCADE, related_name="supplies_given")
+            client = models.ForeignKey(Manufacturer, models.CASCADE, related_name="supplies_received")
             product = models.CharField(max_length=255)
 
             class Meta:
@@ -220,6 +214,8 @@ class TestDeclarativeFilterSetCreation:
 
         class AllFields(models.Model):
             name = models.CharField(max_length=20)
+            foo = models.CharField(max_length=20)
+            bar = models.CharField(max_length=20)
 
             class Meta:
                 app_label = 'faux_app'
@@ -231,14 +227,11 @@ class TestDeclarativeFilterSetCreation:
 
         filterset = AllFieldsFilterSet()
         field_names = [f.name for f in AllFields._meta.get_fields()]
-        # Cursor check for all fields
-        assert sorted([f.name for f in filterset.filters]) == sorted(field_names)
+        # Cursor check for all alphanumerically ordered filters
+        assert [f.name for f in filterset.filters] == sorted(field_names)
 
         # Check for all fields and all lookups
-        expected_filters = {
-            field.name: list(field.get_lookups().keys())
-            for field in AllFields._meta.get_fields()
-        }
+        expected_filters = {field.name: list(field.get_lookups().keys()) for field in AllFields._meta.get_fields()}
         assert get_filter_lookup_mapping(filterset) == expected_filters
 
     def test_derive_some_fields_and_lookups(self):

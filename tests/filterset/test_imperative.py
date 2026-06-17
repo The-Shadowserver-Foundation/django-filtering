@@ -6,7 +6,7 @@ from pytest_django import asserts
 from django_filtering import filters
 from django_filtering.filterset import FilterSet, InvalidFilterSet
 from tests.lab_app.filters import ParticipantFilterSet, StudyFilterSet
-from tests.lab_app.models import Participant
+from tests.lab_app.models import Participant, Staff
 from tests.market_app.filters import (
     KitchenProductFilterSet,
     ProductFilterSet,
@@ -122,6 +122,78 @@ class TestFilterSetCreation:
         # Check for the expected filters and lookups
         filterset = ParticipantFilterSet()
         assert get_filter_lookup_mapping(filterset) == expected_filters
+
+    def test_subclasses_inherits_order(self):
+        """
+        Expect subclasses of the FilterSet to have filters defined on the superclass.
+        Also, tests metadata error is not raise when the FilterSet is marked as abstract.
+        """
+        expected_filter_order = ["name", "age"]
+
+        # Define a base filterset class
+        class LabFilterSet(FilterSet):
+            name = filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                default_lookup="icontains",
+                label="Name",
+            )
+
+            class Meta:
+                abstract = True
+                order = ('name',)
+
+        # Define a class that subclasses the base filterset.
+        class StaffFilterSet(LabFilterSet):
+            age = filters.Filter(
+                filters.InputLookup('gte', label="greater than or equal to"),
+                filters.InputLookup('lte', label="less than or equal to"),
+                default_lookup="gte",
+                label="Age",
+            )
+
+            class Meta:
+                model = Staff
+
+        # Expect subclasses of the FilterSet to carry over filter order of the superclass.
+        assert list(StaffFilterSet._meta.filters) == expected_filter_order
+
+    def test_ordered_filters(self):
+        """
+        Expect subclasses of the FilterSet to have filters defined on the superclass.
+        Also, tests metadata error is not raise when the FilterSet is marked as abstract.
+        """
+        expected_filter_order = ['credentials', 'age', 'name']
+
+        # Define a base filterset class
+        class LabFilterSet(FilterSet):
+            name = filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                default_lookup="icontains",
+                label="Name",
+            )
+
+            class Meta:
+                abstract = True
+
+        # Define a class that subclasses the base filterset.
+        class StaffFilterSet(LabFilterSet):
+            age = filters.Filter(
+                filters.InputLookup('gte', label="greater than or equal to"),
+                filters.InputLookup('lte', label="less than or equal to"),
+                default_lookup="gte",
+                label="Age",
+            )
+            credentials = filters.Filter(
+                filters.InputLookup('icontains', label='contains'),
+                label="Credentials",
+            )
+
+            class Meta:
+                model = Staff
+                order = ['credentials']
+
+        # Expect subclasses of the FilterSet to carry over the filters defined on the superclass.
+        assert list(StaffFilterSet._meta.filters) == expected_filter_order
 
 
 @pytest.mark.django_db

@@ -127,8 +127,9 @@ class Metadata:
 
     PUBLIC_KEYWORD_ARGS = (
         'abstract',
-        'model',
         'fields',
+        'model',
+        'order',
     )
     PRIVATE_KEYWORD_ARGS = (
         '_parents',
@@ -145,6 +146,7 @@ class Metadata:
                 self.model = self.parents[0]._meta.model
             else:
                 raise RequiredMetadataError('model')
+        self.order = kwargs.get('order')
 
         # Collect the filters.
         self._filters = kwargs.get('_declared_filters', {})
@@ -154,6 +156,12 @@ class Metadata:
             # Generate the filters for meta declared fields and lookups.
             field_filters = filters_for_model(self.model, fields=self.fields)
             self._filters |= {name: filter for name, filter in field_filters.items() if name not in self._filters}
+
+        # Discover the filter order
+        if self.order is None and self.parents:
+            self.order = self.parents[0]._meta.order
+        if not (self.order is None or isinstance(self.order, (list, tuple))):
+            raise ValueError(f"An invalid value was used for the FilterSet metadata 'order': {self.order}")
 
     def contribute_to_class(self, cls):
         """
@@ -177,6 +185,14 @@ class Metadata:
             for name, filter in parent._meta.filters.items():
                 if name not in filters:
                     filters[name] = filter
+
+        # Order the filters (default: alphanumeric)
+        if self.order is None:
+            filters = dict(sorted(filters.items()))
+        elif isinstance(self.order, (list, tuple)):
+            complete_order = [*self.order, *sorted(filters.keys() - self.order)]
+            filters = {k: filters[k] for k in complete_order}
+
         return filters
 
     def get_filter(self, name: str) -> Filter:
