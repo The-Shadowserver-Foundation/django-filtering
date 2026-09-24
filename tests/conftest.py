@@ -16,6 +16,8 @@ def pytest_configure(config):
             "tests.market_app",
             "tests.faux_app",
         ],
+        # Use BLANK_CHOICE_DASH to provide backwards compatibility with Django < 6.1.
+        USE_BLANK_CHOICE_DASH=True,
     )
 
     django.setup()

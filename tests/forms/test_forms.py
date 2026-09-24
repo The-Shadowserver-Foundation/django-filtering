@@ -57,7 +57,7 @@ class TestLookupToFormField:
         form_field = form_fields[f"{filter.name}__{lookup.name}"]
         # Expect an instance of ChoiceField
         assert isinstance(form_field, forms.ChoiceField)
-        assert form_field.choices == model._meta.get_field('state').get_choices()
+        assert form_field.choices == list(model._meta.get_field('state').get_choices())
 
     def test_ChoiceLookup__from_related_field_choices(self):
         class TestFilterSet(StudyFilterSet):

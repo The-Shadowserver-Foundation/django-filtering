@@ -1,3 +1,7 @@
+## 0.7.2 -
+
+- Fixed: Django >=6.1 changes the `BLANK_CHOICE_DASH` to a translatable string. Fixed the tests to be backwards compatible with all supported Django versions.
+
 ## 0.7.1 - 2026-Jun-16
 
 - Added: Filters are now alphanumerically ordered by default and allow for `Meta.order` to customize.
