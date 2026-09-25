@@ -1,4 +1,4 @@
-## 0.7.2 -
+## 0.8.0 - 2026-Sep-24
 
 - Fixed: Django >=6.1 changes the `BLANK_CHOICE_DASH` to a translatable string. Fixed the tests to be backwards compatible with all supported Django versions.
 - Fixed: Use the field's `hidden_widget` attribute when hiding fields in `FlatFilterForm`.
