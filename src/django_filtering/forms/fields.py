@@ -1,10 +1,11 @@
 from django import forms
 
-from .widgets import DateRangeWidget
+from .widgets import DateRangeWidget, HiddenDateRangeWidget
 
 
 class DateRangeField(forms.MultiValueField):
     widget = DateRangeWidget
+    hidden_widget = HiddenDateRangeWidget
 
     def __init__(self, *args, **kwargs):
         fields = (

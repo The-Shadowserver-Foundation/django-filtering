@@ -1,16 +1,7 @@
 from django import forms
 
 
-class DateRangeWidget(forms.MultiWidget):
-    template_name = 'django_filtering/forms/widgets/date_range.html'
-
-    def __init__(self, attrs=None):
-        widgets = [
-            forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-            forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-        ]
-        super().__init__(widgets, attrs)
-
+class DateRangeWidgetMixin:
     def get_context(self, name, value, attrs):
         context = super().get_context(name, value, attrs)
         # Render the widgets separate so that the widget's default renderer is used.
@@ -24,3 +15,20 @@ class DateRangeWidget(forms.MultiWidget):
         if value:
             return [value.start, value.stop]
         return [None, None]
+
+
+class DateRangeWidget(DateRangeWidgetMixin, forms.MultiWidget):
+    template_name = 'django_filtering/forms/widgets/date_range.html'
+
+    def __init__(self, attrs=None):
+        widgets = [
+            forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+        ]
+        super().__init__(widgets, attrs)
+
+
+class HiddenDateRangeWidget(DateRangeWidgetMixin, forms.MultiWidget):
+    def __init__(self, attrs=None):
+        widgets = [forms.HiddenInput(), forms.HiddenInput()]
+        super().__init__(widgets, attrs)

@@ -498,7 +498,9 @@ class TestFilterSetFormAdaptation:
 
         # Expect all 'stocked_on' fields to be hidden.
         assert all(
-            isinstance(form.fields[fn].widget, forms.HiddenInput) for fn in form.fields if fn.startswith('stocked_on')
+            isinstance(form.fields[fn].widget, form.fields[fn].hidden_widget)
+            for fn in form.fields
+            if fn.startswith('stocked_on')
         )
 
     def test_with_MultiValueField(self):
@@ -536,6 +538,26 @@ class TestFilterSetFormAdaptation:
         ]
         assert form.filterset.query_data[0] == expected_query_data[0]
         assert sorted(form.filterset.query_data[1]) == expected_query_data[1]
+
+    def test_with_hidden_MultiValueField(self):
+
+        class ParticipantFilterSet(FilterSet):
+            onboarded = Filter(DateRangeLookup(label="between"), label="Onboarded")
+
+            class Meta:
+                model = Participant
+                fields = {'name': ['icontains']}
+
+        filterset_cls, filter_form_cls = self.make_em(ParticipantFilterSet, hidden_fields=['onboarded__range'])
+        filterset = filterset_cls(['and', [['name', {'lookup': 'icontains', 'value': 'foo'}]]])
+        data = {'name__icontains': 'bar'}
+
+        # Target
+        form = filter_form_cls(filterset, data=data)
+        # Expect the field to be hidden using the [MultiValueField].hidden_widget class.
+        assert isinstance(form.fields['onboarded__range'].widget, DateRangeField.hidden_widget)
+        assert form['onboarded__range'].is_hidden is True
+        assert form.has_changed()  # Triggers [MultiValueField].decompress
 
     def test_invalid_form_stops_translation_to_filterset(self, mocker):
         """

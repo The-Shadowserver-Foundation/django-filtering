@@ -1,6 +1,8 @@
 ## 0.7.2 -
 
 - Fixed: Django >=6.1 changes the `BLANK_CHOICE_DASH` to a translatable string. Fixed the tests to be backwards compatible with all supported Django versions.
+- Fixed: Use the field's `hidden_widget` attribute when hiding fields in `FlatFilterForm`.
+- Added: Created the `HiddenDateRangeWidget` to provide a hidden `MultiWidget` for `DateRangeField`.
 
 ## 0.7.1 - 2026-Jun-16
 

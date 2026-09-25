@@ -58,7 +58,7 @@ class FlatFilteringForm(forms.Form):
             else:
                 field_names = [field_name]
             for fn in field_names:
-                self.fields[fn].widget = forms.HiddenInput()
+                self.fields[fn].widget = self.fields[fn].hidden_widget()
 
         # Only initialize from the filterset when the form is enabled.
         if self.is_enabled:
@@ -284,9 +284,6 @@ def flat_filtering_form_factory(
     """
     Factory for creating a form
     that can be used with one level of nested query data.
-
-    The ``HiddenInput`` widget will be set on each field mentioned ``hidden_fields``.
-
     """
     if hidden_fields is None:
         hidden_fields = []
