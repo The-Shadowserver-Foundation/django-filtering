@@ -4,6 +4,7 @@
 - Fixed: Use the field's `hidden_widget` attribute when hiding fields in `FlatFilterForm`.
 - Added: Created the `HiddenDateRangeWidget` to provide a hidden `MultiWidget` for `DateRangeField`.
 - Added: CI matrix tests for versions of Python and Django.
+- Changed: Dropped support for Django < 5.2 and Python < 3.12
 
 ## 0.7.1 - 2026-Jun-16
 
